@@ -24,6 +24,7 @@ import {
   CREDENTIAL_DISPLAY_KEY,
   API_VERSIONS,
   CREDENTIAL_TYPE_LIST,
+  DEVOPS_SYNC_STATUE,
 } from 'utils/constants'
 
 import FORM_TEMPLATES from 'utils/form.templates'
@@ -206,6 +207,11 @@ export default class CredentialStore extends BaseStore {
 
     set(origin, 'data', data)
     set(origin, 'metadata.annotations["kubesphere.io/description"]', des)
+    set(
+      origin,
+      'metadata.annotations["credential.devops.kubesphere.io/syncstatus"]',
+      DEVOPS_SYNC_STATUE.Pending
+    )
 
     return await this.request.put(
       `${this.getResourceUrl({

@@ -19,6 +19,7 @@
 import { omit, isArray, get, set, isEmpty, cloneDeep } from 'lodash'
 import { saveAs } from 'file-saver'
 import { action, observable, toJS } from 'mobx'
+import DEVOPS_SYNC_STATUE from 'utils/constants'
 import BaseStore from './base'
 
 const TABLE_LIMIT = 10
@@ -452,6 +453,11 @@ export default class PipelineStore extends BaseStore {
   async updatePipeline({ cluster, data, devops }) {
     data.kind = 'Pipeline'
     data.apiVersion = 'devops.kubesphere.io/v1alpha3'
+    set(
+      data,
+      'metadata.annotations["pipeline.devops.kubesphere.io/syncstatus"]',
+      DEVOPS_SYNC_STATUE.Pending
+    )
 
     const url = `${this.getDevOpsDetailUrl({
       devops,

@@ -18,10 +18,9 @@
 
 import { set, get, isArray, omit, cloneDeep } from 'lodash'
 import { action, observable } from 'mobx'
-
 import Base from 'stores/base'
-
 import RoleStore from 'stores/role'
+import DEVOPS_SYNC_STATUE from 'utils/constants'
 
 export default class DevOpsStore extends Base {
   @observable
@@ -163,6 +162,12 @@ export default class DevOpsStore extends Base {
         data,
         'metadata.annotations["kubesphere.io/alias-name"]',
         newData.aliasName
+      )
+
+      set(
+        data,
+        'metadata.annotations["devopsproject.devops.kubesphere.io/syncstatus"]',
+        DEVOPS_SYNC_STATUE.Pending
       )
 
       return this.submitting(

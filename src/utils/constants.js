@@ -1025,6 +1025,16 @@ export const CREDENTIAL_DISPLAY_KEY = {
   kubeconfig: 'kubeconfig',
 }
 
+export const DEVOPS_SYNC_STATUE = {
+  Active: 'active',
+  Deleted: 'deleted',
+  Deleting: 'deleting',
+  Failed: 'failed',
+  Pending: 'pending',
+  Working: 'working',
+  Successful: 'successful',
+}
+
 export const FED_ACTIVE_STATUS = {
   FederatedApplication: 'Running',
   FederatedService: 'Running',
