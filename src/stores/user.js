@@ -29,6 +29,10 @@ import List from './base.list'
 export default class UsersStore extends Base {
   records = new List()
 
+  ingroup = new List()
+
+  notingroup = new List()
+
   @observable
   roles = []
 
@@ -282,5 +286,28 @@ export default class UsersStore extends Base {
       page: Number(params.page) || 1,
       isLoading: false,
     })
+  }
+
+  @action
+  async fetchGroupUser({ type, more, ...params } = {}) {
+    this[type].isLoading = true
+    if (!params.sortBy && params.ascending === undefined) {
+      params.sortBy = 'createTime'
+    }
+    const result = await request.get(this.getResourceUrl(params), params)
+    const data = get(result, 'items', []).map(item => ({
+      ...this.mapper(item),
+    }))
+
+    this[type].update({
+      data: more ? [...this[type].data, ...data] : data,
+      total: result.totalItems || 0,
+      ...params,
+      limit: Number(params.limit) || 10,
+      page: Number(params.page) || 1,
+      isLoading: false,
+      ...(this[type].silent ? {} : { selectedRowKeys: [] }),
+    })
+    return data
   }
 }

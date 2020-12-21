@@ -501,6 +501,52 @@ const getServiceMonitorTemplate = ({ name, namespace }) => ({
   spec: {},
 })
 
+const getGroupTemplate = ({ name, annotations = {}, labels = {} }) => ({
+  apiVersion: 'iam.kubesphere.io/v1alpha2',
+  kind: 'Group',
+  metadata: {
+    labels: {
+      'kubesphere.io/workspace': 'wsp1',
+      ...labels,
+    },
+    GenerateName: name,
+    annotations,
+  },
+  spec: {},
+})
+
+const getWorkspaceRoleBindingTemplate = ({ name, role }) => ({
+  kind: 'WorkspaceRoleBinding',
+  apiVersion: 'iam.kubesphere.io/v1alpha2',
+  subjects: [
+    {
+      kind: 'Group',
+      apiGroup: 'rbac.authorization.k8s.io',
+      name,
+    },
+  ],
+  roleRef: {
+    apiGroup: 'iam.kubesphere.io/v1alpha2',
+    kind: 'WorkspaceRole',
+    name: role,
+  },
+})
+
+const getRolebindingTemplate = ({ name, role }) => ({
+  subjects: [
+    {
+      kind: 'Group',
+      apiGroup: 'rbac.authorization.k8s.io',
+      name,
+    },
+  ],
+  roleRef: {
+    apiGroup: 'rbac.authorization.k8s.io',
+    kind: 'Role',
+    name: role,
+  },
+})
+
 const FORM_TEMPLATES = {
   deployments: getDeploymentTemplate,
   daemonsets: getDaemonSetTemplate,
@@ -532,6 +578,9 @@ const FORM_TEMPLATES = {
   dashboards: getDashboardTemplate,
   federated: getFederatedTemplate,
   servicemonitors: getServiceMonitorTemplate,
+  group: getGroupTemplate,
+  workspacerolebinding: getWorkspaceRoleBindingTemplate,
+  rolebinding: getRolebindingTemplate,
 }
 
 export default FORM_TEMPLATES
