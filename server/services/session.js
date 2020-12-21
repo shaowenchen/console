@@ -24,9 +24,31 @@ const jwtDecode = require('jwt-decode')
 
 const { send_gateway_request } = require('../libs/request')
 
-const { getServerConfig, isAppsRoute, safeParseJSON } = require('../libs/utils')
+const { isAppsRoute, safeParseJSON } = require('../libs/utils')
 
-const { client: clientConfig } = getServerConfig()
+const handleLoginResp = (resp = {}) => {
+  if (!resp.access_token) {
+    throw new Error(resp.message)
+  }
+
+  const { access_token, refresh_token, expires_in } = resp || {}
+
+  const { username, extra, groups } = jwtDecode(access_token)
+  const email = get(extra, 'email[0]')
+  const initialized = get(extra, 'uninitialized[0]') !== 'true'
+  const extraname = get(extra, 'username[0]') || get(extra, 'uid[0]')
+
+  return {
+    username,
+    email,
+    groups,
+    extraname,
+    initialized,
+    token: access_token,
+    refreshToken: refresh_token,
+    expire: new Date().getTime() + Number(expires_in) * 1000,
+  }
+}
 
 const login = async (data, headers) => {
   const resp = await send_gateway_request({
@@ -42,20 +64,7 @@ const login = async (data, headers) => {
     },
   })
 
-  const { access_token, refresh_token, expires_in } = resp || {}
-
-  if (!access_token) {
-    throw new Error(resp.message)
-  }
-
-  const { username } = jwtDecode(access_token)
-
-  return {
-    username,
-    token: access_token,
-    refreshToken: refresh_token,
-    expire: new Date().getTime() + Number(expires_in) * 1000,
-  }
+  return handleLoginResp(resp)
 }
 
 const getNewToken = async ctx => {
@@ -96,13 +105,7 @@ const oAuthLogin = async params => {
     url: `/oauth/callback/${params.state}?code=${params.code}`,
   })
 
-  if (!resp.access_token) {
-    throw new Error(resp.message)
-  }
-
-  const { username } = jwtDecode(resp.access_token)
-
-  return { username, token: resp.access_token }
+  return handleLoginResp(resp)
 }
 
 const getUserGlobalRules = async (username, token) => {
@@ -136,8 +139,10 @@ const getUserGlobalRules = async (username, token) => {
   return rules
 }
 
-const getUserDetail = async (username, token) => {
+const getUserDetail = async token => {
   let user = {}
+
+  const { username } = jwtDecode(token)
 
   const resp = await send_gateway_request({
     method: 'GET',
@@ -200,31 +205,20 @@ const getKSConfig = async token => {
 
 const getCurrentUser = async ctx => {
   const token = ctx.cookies.get('token')
-  const username = ctx.cookies.get('currentUser')
 
-  if (!username || !token) {
+  if (!token) {
     if (isAppsRoute(ctx.path)) {
-      const ksConfig = await getKSConfig()
-      return {
-        user: null,
-        config: clientConfig,
-        ksConfig,
-      }
+      return null
     }
     ctx.throw(401, 'Not Login')
   }
 
-  const [userDetail, workspaces, ksConfig] = await Promise.all([
-    getUserDetail(username, token),
+  const [userDetail, workspaces] = await Promise.all([
+    getUserDetail(token),
     getWorkspaces(token),
-    getKSConfig(token),
   ])
 
-  return {
-    config: clientConfig,
-    user: { ...userDetail, workspaces },
-    ksConfig,
-  }
+  return { ...userDetail, workspaces }
 }
 
 const getOAuthInfo = async () => {
@@ -243,33 +237,55 @@ const getOAuthInfo = async () => {
     resp.identityProviders.forEach(item => {
       if (item && item.provider) {
         const title = item.name
-        const params = {
-          state: item.name,
-          client_id: item.provider.clientID,
-          response_type: 'code',
+
+        const authURL = get(item, 'provider.endpoint.authURL')
+        if (item.provider.clientID && authURL) {
+          const params = {
+            state: item.name,
+            client_id: item.provider.clientID,
+            response_type: 'code',
+          }
+
+          if (item.provider.redirectURL) {
+            params.redirect_uri = item.provider.redirectURL
+          }
+
+          if (item.provider.scopes && item.provider.scopes.length > 0) {
+            params.scope = item.provider.scopes.join(' ')
+          }
+
+          const url = `${authURL}?${Object.keys(params)
+            .map(
+              key =>
+                `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`
+            )
+            .join('&')}`
+
+          servers.push({ title, url })
         }
-
-        if (item.provider.redirectURL) {
-          params.redirect_uri = item.provider.redirectURL
-        }
-
-        if (item.provider.scopes && item.provider.scopes.length > 0) {
-          params.scope = item.provider.scopes.join(' ')
-        }
-
-        const url = `${item.provider.endpoint.authURL}?${Object.keys(params)
-          .map(
-            key =>
-              `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`
-          )
-          .join('&')}`
-
-        servers.push({ title, url })
       }
     })
   }
 
   return servers
+}
+
+const createUser = (params, token) => {
+  return send_gateway_request({
+    method: 'POST',
+    url: '/kapis/iam.kubesphere.io/v1alpha2/users',
+    params: {
+      apiVersion: 'iam.kubesphere.io/v1alpha2',
+      kind: 'User',
+      metadata: {
+        name: params.username,
+      },
+      spec: {
+        email: params.email,
+      },
+    },
+    token,
+  })
 }
 
 module.exports = {
@@ -278,4 +294,6 @@ module.exports = {
   getCurrentUser,
   getOAuthInfo,
   getNewToken,
+  getKSConfig,
+  createUser,
 }

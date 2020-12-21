@@ -231,6 +231,7 @@ export const ICON_TYPES = {
   networkpolicies: 'firewall',
   namespacenetworkpolicies: 'firewall',
   pipelines: 'blockchain',
+  ippools: 'eip-group',
 }
 
 export const MODULE_KIND_MAP = {
@@ -258,6 +259,7 @@ export const MODULE_KIND_MAP = {
   users: 'User',
   devops: 'DevOpsProject',
   pipelines: 'Pipelines',
+  ippools: 'IPPool',
 }
 
 export const QUOTAS_MAP = {
@@ -328,6 +330,7 @@ export const REPO_TYPES = [
   { name: 'Git', value: 'git', icon: 'git' },
   { name: 'SVN', value: 'svn', icon: 'svn' },
   { name: 'Bitbucket Server', value: 'bitbucket_server', icon: 'bitbucket' },
+  { name: 'GitLab', value: 'gitlab', icon: 'gitlab' },
 ]
 
 export const REPO_KEY_MAP = {
@@ -336,6 +339,7 @@ export const REPO_KEY_MAP = {
   single_svn: 'single_svn_source',
   github: 'github_source',
   bitbucket_server: 'bitbucket_server_source',
+  gitlab: 'gitlab_source',
 }
 
 export const PIPELINE_PARAMS_TYPES = {
@@ -348,6 +352,7 @@ export const PIPELINE_PARAMS_TYPES = {
 
 export const PIPELINE_ACTION_TYPES = {
   discover_branches: 'Discover Branches',
+  discover_tag: 'Discover Tag Branches',
   discover_pr_from_origin: 'Discover PR from Origin',
   discover_pr_from_forks: 'Discover PR from Forks',
 }
@@ -455,7 +460,7 @@ export const PATTERN_NAME = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/
 export const PATTERN_SERVICE_NAME = /^[a-z]([-a-z0-9]*[a-z0-9])?$/
 export const PATTERN_SERVICE_VERSION = /^[a-z0-9]*$/
 export const PATTERN_LABEL = /(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?/
-export const PATTERN_PASSWORD = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[^]{6,}$/
+export const PATTERN_PASSWORD = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[^]{6,64}$/
 export const PATTERN_IMAGE = /^\S+$/
 export const PATTERN_PORT_NAME = /^[a-z]([-a-z0-9]*[a-z0-9])?$/
 export const PATTERN_COMPONENT_VERSION = /^[a-z0-9]+$/
@@ -842,6 +847,7 @@ export const API_VERSIONS = {
   dashboards: 'apis/monitoring.kubesphere.io/v1alpha1',
   namespacenetworkpolicies: 'apis/network.kubesphere.io/v1alpha1',
   networkpolicies: 'apis/networking.k8s.io/v1',
+  ippools: 'apis/network.kubesphere.io/v1alpha1',
   storageclasscapabilities: 'apis/storage.kubesphere.io/v1alpha1',
 }
 

@@ -103,6 +103,7 @@ export default {
   Discard: 'Descarte',
   'Discard old branch': 'Descartar ramas anteriores',
   'Discard Old Builds': 'Descartar builds antiguas',
+  'Discover Tag Branches': 'Descubrir Tag ramas',
   'Discover Branches': 'Descubrir ramas',
   'Discover branches from repoitory': 'Descubrir ramas desde el repositorio',
   'Discover PR from Forks': 'Descubrir PR desde Forks',
@@ -110,6 +111,8 @@ export default {
   'Discover pull requests from forks': 'Descubrir las PR desde forks',
   'Discover pull requests from origin': 'Descubrir las PR desde origin',
   'Display All': 'Mostrar todo',
+  'Enable Discover Tag Branches': 'Habilitar descoberta de ramo de tag',
+  'Disable Discover Tag Branches': 'Desativar a descoberta do ramo tag',
   'Docker Container Registry Credentials':
     'credenciales de Docker Container Registry',
   'Docker Registry URL': 'URL del Docker Registry',
@@ -237,6 +240,7 @@ export default {
   remote: 'remoto',
   'Remote Repository URL': 'URL de repositorio remoto',
   'Repository Url': 'URL del repositorio',
+  'Repository Name': 'Nombre del repositorio',
   Rescan: 'Reescanear',
   Review: 'revisión',
   Run: 'ejecutar',
@@ -488,4 +492,21 @@ export default {
   'Started By {name}': 'Comenzado por {name}',
   'Credential ID exists': 'El ID de credencial ya existe',
   'Invalid credential ID': 'Invalid credential ID',
+  CI: 'Continuous Integration (CI)',
+  CI_DESC:
+    'Continuous integration (CI) is the process of automatically detecting, pulling, building, and (in most cases) unit testing after source code changes.',
+  CICD: 'Continuous Integration & Delivery (CI/CD)',
+  CICD_DESC:
+    "Continuous deployment (CD) refers to the idea of automatically providing the release version in the continuous delivery pipeline to end users. According to the user's installation method, automatic deployment in the cloud environment, app upgrades (such as apps on mobile phones), website updates, or only the list of available versions.",
+  CUSTOM_PIPELIEN: 'Custom Pipeline',
+  CUSTOM_PIPELIEN_DESC:
+    'You can select the tasks you need to customize the work content of the pipeline',
+  'Copy Pipeline': 'Copiar pipeline',
+  'Brach Run': 'Batch Run',
+  'Brach Run Start': 'Brach Run Start',
+  'Brach Run Success': 'Batch Run Completed',
+  'Brach Run Fail': 'Batch Run Failed',
+  'Run Start': 'Start Running',
+  'Gitlab Server': 'Gitlab Server',
+  'Gitlab Owner': 'Owner',
 }

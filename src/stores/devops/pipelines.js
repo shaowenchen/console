@@ -124,6 +124,9 @@ export default class PipelineStore extends BaseStore {
   @observable
   devopsName = ''
 
+  @observable
+  jenkinsEnvData = ''
+
   @action
   async fetchList({ devops, workspace, devopsName, cluster, ...filters } = {}) {
     this.list.isLoading = true
@@ -139,8 +142,8 @@ export default class PipelineStore extends BaseStore {
         start: (page - 1) * TABLE_LIMIT || 0,
         limit: TABLE_LIMIT,
         q: `type:pipeline;organization:jenkins;pipeline:${devops}/${searchWord ||
-          '*'};excludedFromFlattening:jenkins.branch.MultiBranchProject,hudson.matrix.MatrixProject&filter=${filter ||
-          'no-folders'}`,
+          '*'};excludedFromFlattening:jenkins.branch.MultiBranchProject,hudson.matrix.MatrixProject`,
+        filter: `${filter || 'no-folders'}`,
       },
       { params: { ...filters } }
     )
@@ -150,7 +153,7 @@ export default class PipelineStore extends BaseStore {
 
     this.list = {
       data: result.items || [],
-      total: result.total_count,
+      total: result.total_count || 0,
       limit: parseInt(limit, 10) || 10,
       page: parseInt(page, 10) || 1,
       filters: omit(filters, 'devops'),
@@ -217,6 +220,7 @@ export default class PipelineStore extends BaseStore {
       cluster
     )
 
+    this.setEnvironmentData(toJS(this.jenkinsfile))
     this.pipelineJsonData = {
       pipelineJson: json,
       isLoading: false,
@@ -260,7 +264,7 @@ export default class PipelineStore extends BaseStore {
 
     this.pullRequestList = {
       data: result || [],
-      total: this.detail.totalNumberOfPullRequests,
+      total: this.detail.totalNumberOfPullRequests || 0,
       limit: TABLE_LIMIT,
       page: parseInt(page, 10) || 1,
       filters: omit(filters, 'devops'),
@@ -293,7 +297,7 @@ export default class PipelineStore extends BaseStore {
     this.branchList = {
       data: result || [],
       limit: TABLE_LIMIT,
-      total: this.detail.totalNumberOfBranches,
+      total: this.detail.totalNumberOfBranches || 0,
       page: parseInt(page, 10) || 1,
       filters: omit(filters, 'devops'),
       isLoading: false,
@@ -328,7 +332,7 @@ export default class PipelineStore extends BaseStore {
     this.activityList = {
       limit,
       data: result.items || [],
-      total: result.totalItems,
+      total: result.totalItems || 0,
       page: parseInt(page, 10) || 1,
       filters: omit(filters, 'devops'),
       isLoading: false,
@@ -448,6 +452,7 @@ export default class PipelineStore extends BaseStore {
   async updatePipeline({ cluster, data, devops }) {
     data.kind = 'Pipeline'
     data.apiVersion = 'devops.kubesphere.io/v1alpha3'
+
     const url = `${this.getDevOpsDetailUrl({
       devops,
       cluster,
@@ -458,10 +463,19 @@ export default class PipelineStore extends BaseStore {
     return result
   }
 
+  @action setEnvironmentData = jenkinsFile => {
+    const env = jenkinsFile.match(
+      /environment\s?\{[\s+\w+\s?=\s?'?\w+-?.?'?\s+]+\}/gm
+    )
+    this.jenkinsEnvData = env ? env[0] : ''
+  }
+
   @action
   updateJenkinsFile(jenkinsFile, params) {
-    const data = JSON.parse(JSON.stringify(this.pipelineConfig))
+    const data = cloneDeep(toJS(this.pipelineConfig))
     set(data, 'spec.pipeline.jenkinsfile', jenkinsFile)
+
+    this.jenkinsEnvData = ''
 
     return this.updatePipeline({
       data,

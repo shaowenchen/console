@@ -22,14 +22,14 @@ import { PropertiesInput } from 'components/Inputs'
 
 export default class NodeSchedule extends React.Component {
   get prefix() {
-    return this.props.prefix || 'spec.template.spec.'
+    return this.props.prefix || 'spec.template.'
   }
 
   render() {
     return (
       <Form.Item>
         <PropertiesInput
-          name={`${this.prefix}nodeSelector`}
+          name={`${this.prefix}spec.nodeSelector`}
           addText={t('Add Node Selector')}
         />
       </Form.Item>

@@ -734,6 +734,19 @@ const getApplicationStatus = item => {
   return 'Updating'
 }
 
+const getApplicationServices = item => {
+  return get(item, 'status.components', [])
+    .filter(com => com.kind === 'Service')
+    .map(com => com.name)
+}
+
+const getApplicationWorkloads = item => {
+  const workloadKinds = ['Deployment', 'StatefulSet']
+  return get(item, 'status.components', [])
+    .filter(com => workloadKinds.includes(com.kind))
+    .map(com => com.name)
+}
+
 const ApplicationMapper = item => ({
   ...getBaseInfo(item),
   namespace: get(item, 'metadata.namespace'),
@@ -746,6 +759,8 @@ const ApplicationMapper = item => ({
     get(item, 'metadata.annotations["servicemesh.kubesphere.io/enabled"]') ===
     'true',
   status: getApplicationStatus(item),
+  services: getApplicationServices(item),
+  workloads: getApplicationWorkloads(item),
   _originData: getOriginData(item),
 })
 
@@ -806,6 +821,19 @@ const StrategyMapper = item => {
     props.governor = props.oldVersion
   }
 
+  props.hosts = get(item, 'spec.template.spec.hosts[0]')
+
+  props.oldWorkloadName = get(
+    item,
+    'metadata.annotations["servicemesh.kubesphere.io/oldWorkloadName"]',
+    `${props.hosts}-${props.oldVersion}`
+  )
+  props.newWorkloadName = get(
+    item,
+    'metadata.annotations["servicemesh.kubesphere.io/newWorkloadName"]',
+    `${props.hosts}-${props.newVersion}`
+  )
+
   return {
     ...props,
     ...getBaseInfo(item),
@@ -813,7 +841,6 @@ const StrategyMapper = item => {
     labels: get(item, 'metadata.labels', {}),
     annotations: get(item, 'metadata.annotations', {}),
     selector: get(item, 'spec.selector.matchLabels'),
-    hosts: get(item, 'spec.template.spec.hosts[0]'),
     status: get(item, 'spec.assemblyPhase'),
     _originData: getOriginData(item),
   }
@@ -1185,6 +1212,23 @@ const NetworkPoliciesMapper = item => ({
   key: `${get(item, 'metadata.namespace')}-${get(item, 'metadata.name')}`,
 })
 
+const IPPoolsMapper = item => {
+  const baseInfo = getBaseInfo(item)
+  return {
+    ...baseInfo,
+    cidr: get(item, 'spec.cidr'),
+    status: get(item, 'status', {}),
+    workspace: get(item, 'metadata.labels["kubesphere.io/workspace"]', ''),
+    isDefault: !isUndefined(
+      get(item, 'metadata.labels["ippool.network.kubesphere.io/default"]')
+    ),
+    selector: {
+      'ippool.network.kubesphere.io/name': baseInfo.name,
+    },
+    _originData: getOriginData(item),
+  }
+}
+
 const StorageclasscapabilitiesMapper = item => {
   const { metadata, spec } = item
   const volumeFeature = get(spec, 'features.volume')
@@ -1259,6 +1303,7 @@ export default {
   pipelines: PipelinesMapper,
   networkpolicies: NetworkPoliciesMapper,
   namespacenetworkpolicies: NetworkPoliciesMapper,
+  ippools: IPPoolsMapper,
   storageclasscapabilities: StorageclasscapabilitiesMapper,
   servicemonitors: ServiceMonitorMapper,
   default: DefaultMapper,

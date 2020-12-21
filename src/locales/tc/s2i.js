@@ -47,7 +47,7 @@ export default {
   imageName: '鏡像名稱',
   BuilderPullPolicy: '鏡像拉取策略',
   builderPullPolicy: '鏡像拉取策略',
-  'Jobs Records': '任務紀錄',
+  'Job Records': '任務紀錄',
   'Source to image jobs': 'S2I 任務',
   S2IJobs: 'S2I 任務',
   'Repo url': '倉庫地址',
@@ -123,8 +123,8 @@ export default {
   'Upload file failed': '檔案上傳失敗',
   binary: '二進制檔案',
   'Build image for service x': '為 {service} 服務構建鏡像',
-  'Click to select the artifact file to upload': '點擊成品檔案進行上傳',
-  'Upload Artifacts': '上傳成品',
+  'Click to upload an artifact': '點擊成品檔案進行上傳',
+  'Upload Artifact': '上傳成品',
   'Choose a Language': '選擇語言',
   B2I_DEFAULT_DESC: '點擊成品檔案進行上傳',
   JAR_DESC:
@@ -142,4 +142,7 @@ export default {
   'Repo reading failed': '讀取倉庫失敗',
   'exec: "git": executable file not found in $PATH': '目前 URL 未發現代碼倉庫',
   WRONG_FILE_EXTENSION_NAME: '選擇的檔案類型不符合，請選擇 {type} 類型',
+  'Secret Code': '觸發令牌',
+  SECRET_CODE_RULE_DESC: '只能包含大小寫字母、數字',
+  'Remote Trigger Link': '遠程觸發鏈接',
 }

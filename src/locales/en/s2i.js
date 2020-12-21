@@ -35,8 +35,7 @@ export default {
   'Building Log': 'Building Log',
   'building logs': 'building logs',
   'Choose a Language': 'Choose a Language',
-  'Click to select the artifact file to upload':
-    'Click to select the artifact file to upload',
+  'Click to upload an artifact': 'Click to upload an artifact',
   'Code Resource': 'Code Resource',
   'Code URL': 'Code URL',
   'Container Settings': 'Container Settings',
@@ -58,7 +57,7 @@ export default {
   imageName: 'imageName',
   ImageName: 'ImageName',
   'is Failed': 'is Failed',
-  'Jobs Records': 'Jobs Records',
+  'Job Records': 'Job Records',
   'Last build environment': 'Last build environment',
   'Last Message': 'Last Message',
   'The logging module is not installed.':
@@ -98,7 +97,7 @@ export default {
   'The file has not been uploaded.': 'The file has not been uploaded.',
   'The health of the container will be checked regularly according to user needs.':
     'The health of the container will be checked regularly according to user needs.',
-  'Upload Artifacts': 'Upload Artifacts',
+  'Upload Artifact': 'Upload Artifact',
   'Upload file failed': 'Upload file failed',
   'Upload Percent': 'Upload Percent',
 
@@ -136,7 +135,7 @@ export default {
   S2I_IMAGENAME_DESC:
     'Image name and tag, which defaults to the project name of the code repository.',
   S2I_TARGET_IMAGE_REPONSTRY_DESC:
-    'You need to select an image repository with push permissions to store the image. If not, you can <a href={link} target="_blank">create a new image repository credential</a>.',
+    'You need to select an image repository with push permissions to store the image. If it is not available, you need to <a href={link} target="_blank">create a new image repository Secret</a>.',
   S2I_BUILDERNAME_DESC:
     'Select the editing environment, you can also view the <a href={link} target="_blank">corresponding compilation template</a>',
   IMAGE_BUILDER_DESC:
@@ -157,4 +156,8 @@ export default {
   WRONG_FILE_EXTENSION_NAME:
     'The selected file type does not match, please select the {type} type',
   PROBE_COMMAND_DESC: 'Please use commas to separate multiple commands.',
+  'Secret Code': 'Secret Code',
+  SECRET_CODE_RULE_DESC:
+    'It can only contain upper and lower case letters, numbers.',
+  'Remote Trigger Link': 'Remote Trigger Link',
 }

@@ -41,8 +41,8 @@ export default {
 
   'Registry Address': '仓库地址',
   'Registry verification failed': '镜像仓库校验失败',
-  'Registry verification success': '镜像仓库校验通过',
-  'Account Password Secret': '账号密码密钥',
+  'Registry verification succeeded': '镜像仓库校验通过',
+  'Account Password Secret': '帐户密码密钥',
 
   Data: '数据',
   'Add Data': '添加数据',

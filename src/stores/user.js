@@ -227,6 +227,17 @@ export default class UsersStore extends Base {
   }
 
   @action
+  async jsonPatch({ name }, data) {
+    await this.submitting(
+      request.patch(`apis/iam.kubesphere.io/v1alpha2/users/${name}`, data, {
+        headers: {
+          'content-type': 'application/json-patch+json',
+        },
+      })
+    )
+  }
+
+  @action
   async modifyPassword({ name }, data) {
     return this.submitting(
       request.put(`${this.getDetailUrl({ name })}/password`, data)
@@ -309,5 +320,10 @@ export default class UsersStore extends Base {
       ...(this[type].silent ? {} : { selectedRowKeys: [] }),
     })
     return data
+  }
+
+  @action
+  async confirm(data) {
+    return await this.submitting(request.post(`login/confirm`, data))
   }
 }

@@ -16,9 +16,12 @@
  * along with KubeSphere Console.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-const uid = require('uid-safe')
 const SvgCaptchaFactory = require('svg-captcha')
-const { getCurrentUser, getOAuthInfo } = require('../services/session')
+const {
+  getCurrentUser,
+  getKSConfig,
+  getOAuthInfo,
+} = require('../services/session')
 
 const {
   getServerConfig,
@@ -30,21 +33,16 @@ const { client: clientConfig } = getServerConfig()
 
 const renderView = async ctx => {
   try {
-    const manifest = getManifest()
-    const { user, config, ksConfig } = await getCurrentUser(ctx)
+    const [user, ksConfig] = await Promise.all([
+      getCurrentUser(ctx),
+      getKSConfig(),
+    ])
 
-    await ctx.render('index', {
-      isDev: global.MODE_DEV,
-      title: config.title,
-      config: JSON.stringify(config),
-      ksConfig: JSON.stringify(ksConfig),
-      user: JSON.stringify(user),
-      manifest,
-    })
+    await renderIndex(ctx, { ksConfig, user })
   } catch (err) {
     ctx.app.emit('error', err)
     if (err) {
-      if (err.code === 401 || err.status === 401) {
+      if (err.code === 401 || err.code === 403 || err.status === 401) {
         if (isValidReferer(ctx.path)) {
           ctx.redirect(`/login?referer=${ctx.path}`)
         } else {
@@ -62,6 +60,8 @@ const renderView = async ctx => {
           t: ctx.t.bind(ctx),
           message: 'Unable to access the api server',
         })
+      } else {
+        ctx.app.emit('error', err)
       }
     } else {
       await ctx.render('error', {
@@ -73,26 +73,33 @@ const renderView = async ctx => {
 }
 
 const renderLogin = async ctx => {
-  let loginPath = '/login'
-
-  if (isValidReferer(ctx.query.referer)) {
-    loginPath += `?referer=${ctx.query.referer}`
-  }
-
   ctx.cookies.set('referer', ctx.query.referer)
-
-  ctx.session.salt = uid.sync(12)
 
   const oauthServers = await getOAuthInfo(ctx)
 
-  await ctx.render('login', {
-    loginPath,
+  await renderIndex(ctx, {
     oauthServers: oauthServers || [],
+    errorCount: ctx.session.errorCount,
+  })
+}
+
+const renderLoginConfirm = async ctx => {
+  await renderIndex(ctx, {
+    user: {
+      username: ctx.cookies.get('defaultUser'),
+      email: ctx.cookies.get('defaultEmail'),
+    },
+  })
+}
+
+const renderIndex = async (ctx, params) => {
+  const manifest = getManifest()
+
+  await ctx.render('index', {
+    isDev: global.MODE_DEV,
     title: clientConfig.title,
-    error: ctx.request.error,
-    errorCount: ctx.session.errorCount || 0,
-    salt: ctx.session.salt,
-    t: ctx.t.bind(ctx),
+    manifest,
+    globals: JSON.stringify({ config: clientConfig, ...params }),
   })
 }
 
@@ -119,4 +126,5 @@ module.exports = {
   renderLogin,
   renderMarkdown,
   renderCaptcha,
+  renderLoginConfirm,
 }
