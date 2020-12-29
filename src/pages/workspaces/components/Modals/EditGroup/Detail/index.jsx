@@ -19,7 +19,7 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { observer } from 'mobx-react'
-import { get, set, cloneDeep } from 'lodash'
+import { get, set, cloneDeep, uniq, flatten } from 'lodash'
 
 import { Notify } from '@kube-design/components'
 import DeleteModal from 'components/Modals/Delete'
@@ -80,7 +80,7 @@ export default class Detail extends Component {
 
   getRoleJSON(roles, result) {
     return roles.map(item => {
-      const data = result.find(
+      const data = flatten(result).find(
         v =>
           get(v, 'metadata.namespace') === item.namespace &&
           get(v, 'roleRef.name') === item.role
@@ -126,30 +126,28 @@ export default class Detail extends Component {
   }
 
   handleEdit = async node => {
-    const { workspace } = this.props
-    const result = await this.store.getRoleBinding(node.group_name, {
-      workspace,
-    })
     const formData = cloneDeep(node._originData)
-    const projectRoles = get(
-      formData,
-      'metadata.annotations["kubesphere.io/project-roles"]',
-      []
+    const projectRoles = safeParseJSON(
+      get(formData, 'metadata.annotations["kubesphere.io/project-roles"]', [])
     )
-    const devopsRoles = get(
-      formData,
-      'metadata.annotations["kubesphere.io/devops-roles"]',
-      []
+    const devopsRoles = safeParseJSON(
+      get(formData, 'metadata.annotations["kubesphere.io/devops-roles"]', [])
     )
+    const { workspace } = this.props
+    const clusters = uniq([...projectRoles, ...devopsRoles].map(v => v.cluster))
+    const result = await this.store.fetchRoleBinding(node.group_name, {
+      workspace,
+      clusters,
+    })
     set(
       formData,
       'metadata.annotations["kubesphere.io/project-roles"]',
-      this.getRoleJSON(safeParseJSON(projectRoles), result)
+      this.getRoleJSON(projectRoles, result)
     )
     set(
       formData,
       'metadata.annotations["kubesphere.io/devops-roles"]',
-      this.getRoleJSON(safeParseJSON(devopsRoles), result)
+      this.getRoleJSON(devopsRoles, result)
     )
     this.setState({
       mode: 'edit',

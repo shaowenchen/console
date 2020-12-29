@@ -51,7 +51,7 @@ export default class GroupStore extends Base {
     }
 
     if (workspace) {
-      return `/workspaces/${workspace}`
+      return `${path}/workspaces/${workspace}`
     }
 
     return path
@@ -394,13 +394,26 @@ export default class GroupStore extends Base {
   }
 
   @action
-  async getRoleBinding(group, { workspace }) {
-    return await request.get(
-      `${this.apiVersion}${this.getPath({ workspace })}/rolebindings`,
+  getRoleBinding(group, params = {}) {
+    return request.get(
+      `${this.apiVersion}${this.getPath(params)}/rolebindings`,
       {
         labelSelector: `iam.kubesphere.io/group-ref=${group}`,
       }
     )
+  }
+
+  @action
+  fetchRoleBinding(group, { clusters, ...params }) {
+    const requests = []
+    if (clusters.length > 0) {
+      clusters.forEach(cluster => {
+        requests.push(this.getRoleBinding(group, { cluster, ...params }))
+      })
+    } else {
+      requests.push(this.getRoleBinding(group, { ...params }))
+    }
+    return Promise.all(requests)
   }
 
   @action
