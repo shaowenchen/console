@@ -22,6 +22,7 @@ export const formatTreeData = (treeData, rootName) => {
       const parent = item
       parent.children = []
       parent.path = [rootName, parent.group_name]
+      parent.parent_id = item.parent_id || 'root'
       treeData.forEach(children => {
         if (parent.group_id === children.parent_id) {
           children.parent_name = parent.group_name
@@ -29,7 +30,7 @@ export const formatTreeData = (treeData, rootName) => {
           parent.children = [...parent.children, children]
         }
       })
-      if (parent.parent_id === 'root' || !parent.parent_id) {
+      if (parent.parent_id === 'root') {
         parent.parent_name = rootName
         return parent
       }
@@ -37,4 +38,12 @@ export const formatTreeData = (treeData, rootName) => {
       return null
     })
     .filter(item => item)
+}
+
+export const formatRowTreeData = treeData => {
+  const obj = {}
+  return treeData.reduce((item, next) => {
+    if (!obj[next.group_id]) obj[next.group_id] = true && item.push(next)
+    return item
+  }, [])
 }

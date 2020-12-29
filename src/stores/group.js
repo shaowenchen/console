@@ -17,8 +17,9 @@
  */
 
 import { observable, action } from 'mobx'
-import { get } from 'lodash'
-import { formatTreeData } from 'utils/group'
+import { get, set } from 'lodash'
+import { formatTreeData, formatRowTreeData } from 'utils/group'
+import FORM_TEMPLATES from 'utils/form.templates'
 import Base from './base'
 
 export default class GroupStore extends Base {
@@ -26,6 +27,9 @@ export default class GroupStore extends Base {
 
   @observable
   treeData = []
+
+  @observable
+  rowTreeData = []
 
   get apiVersion() {
     return 'kapis/iam.kubesphere.io/v1alpha2'
@@ -56,6 +60,15 @@ export default class GroupStore extends Base {
   getResourceUrl = (params = {}) =>
     `kapis/iam.kubesphere.io/v1alpha2${this.getPath(params)}/groups`
 
+  getDetailUrl = (params = {}) =>
+    `${this.getResourceUrl(params)}/${params.name}`
+
+  getWatchListUrl = ({ workspace, ...params }) => {
+    return `apis/iam.kubesphere.io/v1alpha2/watch${this.getPath(
+      params
+    )}/groups?labelSelector=kubesphere.io/workspace=${workspace}`
+  }
+
   @action
   async fetchGroup({ workspace, ...params } = {}) {
     this.isLoading = true
@@ -73,40 +86,82 @@ export default class GroupStore extends Base {
       group_name: get(item, 'metadata.generateName'),
       alias_name: get(item, 'metadata.annotations["kubesphere.io/alias-name"]'),
       parent_id: get(item, 'metadata.labels["iam.kubesphere.io/group-parent"]'),
-      originData: item,
+      _originData: item,
     }))
     this.total = get(result, 'totalItems')
-    if (this.total > 0) {
-      this.treeData = [
-        {
-          key: 'root',
-          title: workspace,
-          group_id: 'root',
-          group_name: workspace,
-          path: [workspace],
-          children: formatTreeData(data, workspace),
-        },
-      ]
-    }
+    this.treeData = [
+      {
+        key: 'root',
+        title: workspace,
+        group_id: 'root',
+        group_name: workspace,
+        path: [workspace],
+        children: formatTreeData(data, workspace),
+      },
+    ]
+    this.rowTreeData = formatRowTreeData(data)
     this.isLoading = false
+    this.list.update({
+      data,
+      total: result.totalItems || 0,
+      ...params,
+      limit: Number(params.limit) || 10,
+      page: Number(params.page) || 1,
+      isLoading: false,
+    })
   }
 
   @action
   create(data, params) {
-    const requests = []
-    if (data.Group) {
-      requests.push(request.post(this.getResourceUrl(params), data.Group))
-    }
-    if (data.WorkspaceRoleBinding) {
-      requests.push(
-        this.addWorksapceRoleBinding(data.WorkspaceRoleBinding, params)
-      )
-    }
-    if (data.RoleBinding) {
-      data.RoleBinding.map(rolebinding =>
-        requests.push(
-          this.addRolebindings(rolebinding.body, rolebinding.params)
-        )
+    const name = get(data, 'metadata.generateName')
+    const workspaceRole = get(
+      data,
+      'metadata.annotations["kubesphere.io/workspace-role"]'
+    )
+    const projectRoles = get(
+      data,
+      'metadata.annotations["kubesphere.io/project-roles"]',
+      []
+    )
+    const devopsRoles = get(
+      data,
+      'metadata.annotations["kubesphere.io/devops-roles"]',
+      []
+    )
+
+    set(
+      data,
+      'metadata.annotations["kubesphere.io/project-roles"]',
+      JSON.stringify(projectRoles)
+    )
+    set(
+      data,
+      'metadata.annotations["kubesphere.io/devops-roles"]',
+      JSON.stringify(devopsRoles)
+    )
+
+    const requests = [
+      request.post(this.getResourceUrl(params), data),
+      this.addWorksapceRoleBinding(
+        [FORM_TEMPLATES['workspacerolebinding']({ name, role: workspaceRole })],
+        params
+      ),
+    ]
+
+    const rolebinds = [...projectRoles, ...devopsRoles]
+
+    if (rolebinds.length > 0) {
+      rolebinds.forEach(
+        ({ role, ...rest }) =>
+          role &&
+          requests.push(
+            this.addRolebindings(
+              [FORM_TEMPLATES['rolebinding']({ name, role })],
+              {
+                ...rest,
+              }
+            )
+          )
       )
     }
 
@@ -114,16 +169,164 @@ export default class GroupStore extends Base {
   }
 
   @action
-  checkName({ name, ...params }) {
-    return request.get(
-      `${this.getResourceUrl(params)}`,
-      {
-        name,
-      },
-      {
-        headers: { 'x-check-exist': true },
-      }
+  async update(data, detail, params) {
+    const name = get(data, 'metadata.name')
+    const generateName = get(data, 'metadata.generateName')
+    const patchData = {}
+    const aliasName = get(
+      data,
+      'metadata.annotations["kubesphere.io/alias-name"]'
     )
+    const workspaceRole = get(
+      data,
+      'metadata.annotations["kubesphere.io/workspace-role"]'
+    )
+    const projectRoles = get(
+      data,
+      'metadata.annotations["kubesphere.io/project-roles"]',
+      []
+    )
+    const devopsRoles = get(
+      data,
+      'metadata.annotations["kubesphere.io/devops-roles"]',
+      []
+    )
+
+    set(
+      patchData,
+      'metadata.annotations["kubesphere.io/alias-name"]',
+      aliasName
+    )
+    set(
+      patchData,
+      'metadata.annotations["kubesphere.io/workspace-role"]',
+      workspaceRole
+    )
+    set(
+      patchData,
+      'metadata.annotations["kubesphere.io/project-roles"]',
+      JSON.stringify(projectRoles)
+    )
+    set(
+      patchData,
+      'metadata.annotations["kubesphere.io/devops-roles"]',
+      JSON.stringify(devopsRoles)
+    )
+
+    const requests = [
+      request.patch(this.getDetailUrl({ ...params, name }), patchData),
+    ]
+
+    const oldWorkspaceRole = get(
+      detail,
+      'metadata.annotations["kubesphere.io/workspace-role"]'
+    )
+    if (workspaceRole !== oldWorkspaceRole) {
+      const worksapceRoleBindingResult = await this.getWorksapceRoleBinding(
+        generateName,
+        params
+      )
+      await this.deleteWorksapceRoleBinding(
+        get(worksapceRoleBindingResult[0], 'metadata.name'),
+        params
+      )
+      requests.push(
+        this.addWorksapceRoleBinding(
+          [
+            FORM_TEMPLATES['workspacerolebinding']({
+              name,
+              role: workspaceRole,
+            }),
+          ],
+          params
+        )
+      )
+    }
+
+    const oldProjectRoles = get(
+      detail,
+      'metadata.annotations["kubesphere.io/project-roles"]'
+    )
+    const oldDevopsRoles = get(
+      detail,
+      'metadata.annotations["kubesphere.io/devops-roles"]'
+    )
+    const rolebinding = [...projectRoles, ...devopsRoles]
+    const oldRolebinding = [...oldProjectRoles, ...oldDevopsRoles]
+    const roleRequest = this.getUpdateRolebindsRequests(
+      rolebinding,
+      oldRolebinding,
+      data
+    )
+
+    if (roleRequest.length > 0) {
+      requests.push(roleRequest)
+    }
+
+    return this.submitting(Promise.all(requests))
+  }
+
+  getUpdateRolebindsRequests(newRolebinds, oldRolebinds, data) {
+    const generateName = get(data, 'metadata.generateName')
+    const requests = []
+    newRolebinds.forEach(nrb => {
+      const { role, namespace, cluster } = nrb
+      const orb = oldRolebinds.find(
+        item =>
+          item.cluster === cluster &&
+          item.namespace === namespace &&
+          item.role === role
+      )
+      if (!orb) {
+        requests.push(
+          this.addRolebindings(
+            [FORM_TEMPLATES['rolebinding']({ name: generateName, role })],
+            {
+              cluster,
+              namespace,
+            }
+          )
+        )
+      }
+    })
+
+    oldRolebinds.forEach(orb => {
+      const { namespace, cluster, role, name } = orb
+
+      const nrb = newRolebinds.find(
+        item =>
+          item.cluster === cluster &&
+          item.namespace === namespace &&
+          item.role === role
+      )
+
+      if (!nrb) {
+        requests.push(
+          this.deleteRolebindings(name, {
+            cluster,
+            namespace,
+          })
+        )
+      }
+    })
+
+    return requests
+  }
+
+  @action
+  async checkName({ name, ...params }) {
+    const result = await request.get(`${this.getResourceUrl(params)}`, {
+      name,
+    })
+
+    if (
+      result.items &&
+      result.items.some(item => get(item, 'metadata.generateName') === name)
+    ) {
+      return { exist: true }
+    }
+
+    return { exist: false }
   }
 
   @action
@@ -131,6 +334,13 @@ export default class GroupStore extends Base {
     return request.post(
       `${this.apiVersion}${this.getPath(params)}/groupbindings`,
       data
+    )
+  }
+
+  @action
+  deleteGroupBinding(name, params = {}) {
+    return request.delete(
+      `${this.apiVersion}${this.getPath(params)}/groupbindings/${name}`
     )
   }
 
@@ -143,6 +353,13 @@ export default class GroupStore extends Base {
   }
 
   @action
+  deleteWorksapceRoleBinding(name, params = {}) {
+    return request.delete(
+      `${this.apiVersion}${this.getPath(params)}/workspacerolebindings/${name}`
+    )
+  }
+
+  @action
   addRolebindings(data, params = {}) {
     return request.post(
       `${this.apiVersion}${this.getPath(params)}/rolebindings`,
@@ -150,38 +367,39 @@ export default class GroupStore extends Base {
     )
   }
 
-  @action getGroupBinding({ group, workspace }) {
+  @action
+  deleteRolebindings(name, params = {}) {
+    return request.delete(
+      `${this.apiVersion}${this.getPath(params)}/rolebindings/${name}`
+    )
+  }
+
+  @action getGroupBinding(group, params = {}) {
     return request.get(
-      `${this.apiVersion}${this.getPath({
-        workspace,
-      })}/groups/${group}/groupbindings`
+      `${this.apiVersion}${this.getPath(params)}/groupbindings`,
+      {
+        labelSelector: `iam.kubesphere.io/group-ref=${group}`,
+      }
     )
   }
 
   @action
-  async getWorksapceRoleBinding({ group, workspace }) {
+  async getWorksapceRoleBinding(group, params = {}) {
     return await request.get(
-      `${this.apiVersion}${this.getPath({
-        workspace,
-      })}/groups/${group}/workspacerolebindings`
+      `${this.apiVersion}${this.getPath(params)}/workspacerolebindings`,
+      {
+        labelSelector: `iam.kubesphere.io/group-ref=${group}`,
+      }
     )
   }
 
   @action
-  async getRoleBinding({ group, workspace }) {
+  async getRoleBinding(group, { workspace }) {
     return await request.get(
-      `${this.apiVersion}${this.getPath({
-        workspace,
-      })}/groups/${group}/rolebindings`
-    )
-  }
-
-  @action
-  async getDevOpsRoleBinding({ group, workspace }) {
-    return await request.get(
-      `${this.apiVersion}${this.getPath({
-        workspace,
-      })}/groups/${group}/devopsrolebindings`
+      `${this.apiVersion}${this.getPath({ workspace })}/rolebindings`,
+      {
+        labelSelector: `iam.kubesphere.io/group-ref=${group}`,
+      }
     )
   }
 
@@ -189,13 +407,6 @@ export default class GroupStore extends Base {
   deleteGroup(name, params = {}) {
     return request.delete(
       `${this.apiVersion}${this.getPath(params)}/groups/${name}`
-    )
-  }
-
-  @action
-  deleteGroupBinding(name, params = {}) {
-    return request.delete(
-      `${this.apiVersion}${this.getPath(params)}/groupbindings/${name}`
     )
   }
 }

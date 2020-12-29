@@ -20,12 +20,14 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { computed, toJS } from 'mobx'
 import { observer } from 'mobx-react'
+import { isEqual } from 'lodash'
 
 import { Select, Icon } from '@kube-design/components'
-import { ObjectInput } from 'components/Inputs'
 
 import RoleStore from 'stores/role'
 import DevOpsStore from 'stores/devops'
+
+import styles from './index.scss'
 
 @observer
 export default class DevopsSelect extends Component {
@@ -40,20 +42,49 @@ export default class DevopsSelect extends Component {
     this.devopsRoleStore = new RoleStore()
 
     this.state = {
-      cluster: '',
-      devops: '',
-      role: '',
+      cluster: props.value.cluster || '',
+      namespace: props.value.namespace || '',
+      role: props.value.role || '',
+    }
+  }
+
+  componentDidMount() {
+    this.fetchDevops()
+    this.fetchDevopsRoles()
+  }
+
+  componentDidUpdate(prevProps) {
+    if (!isEqual(prevProps.value, this.props.value)) {
+      this.setState(
+        {
+          cluster: this.props.value.cluster || '',
+          namespace: this.props.value.namespace || '',
+          role: this.props.value.role || '',
+        },
+        () => {
+          this.fetchDevops()
+          this.fetchDevopsRoles()
+        }
+      )
     }
   }
 
   @computed
   get devops() {
+    const { arrayValue = [] } = this.props
     const { data } = toJS(this.devopsStore.list)
-    return data.map(item => ({
-      label: item.name,
-      value: item.devops,
-      item,
-    }))
+    return data
+      .filter(item =>
+        arrayValue.every(
+          arrv =>
+            arrv.cluster !== this.state.cluster || arrv.namespace !== item.name
+        )
+      )
+      .map(item => ({
+        label: item.name,
+        value: item.devops,
+        item,
+      }))
   }
 
   @computed
@@ -67,39 +98,43 @@ export default class DevopsSelect extends Component {
 
   fetchDevops() {
     const { cluster } = this.state
-    this.devopsStore.fetchList({
-      workspace: this.props.workspace,
-      cluster,
-      limit: -1,
-      sortBy: 'createTime',
-    })
+    if (cluster) {
+      this.devopsStore.fetchList({
+        workspace: this.props.workspace,
+        cluster,
+        limit: -1,
+        sortBy: 'createTime',
+      })
+    }
   }
 
   fetchDevopsRoles() {
-    const { cluster, devops } = this.state
-    this.devopsRoleStore.fetchList({
-      devops,
-      cluster,
-      limit: -1,
-      sortBy: 'createTime',
-    })
+    const { cluster, namespace } = this.state
+    if (cluster && namespace) {
+      this.devopsRoleStore.fetchList({
+        devops: namespace,
+        cluster,
+        limit: -1,
+        sortBy: 'createTime',
+      })
+    }
   }
 
   handleChange = () => {
-    const { cluster, devops, role } = this.state
-    this.props.onChange({ cluster, devops, role })
+    const { cluster, namespace, role } = this.state
+    this.props.onChange({ cluster, namespace, role })
   }
 
   handleClusterChange = cluster => {
-    this.setState({ cluster, devops: '', role: '' }, () => {
+    this.setState({ cluster, namespace: '', role: '' }, () => {
       this.handleChange()
       this.fetchDevops()
       this.devopsRoleStore.list.update({ data: [] })
     })
   }
 
-  handleDevopsChange = devops => {
-    this.setState({ devops, role: '' }, () => {
+  handleDevopsChange = namespace => {
+    this.setState({ namespace, role: '' }, () => {
       this.handleChange()
       this.fetchDevopsRoles()
     })
@@ -110,12 +145,18 @@ export default class DevopsSelect extends Component {
   }
 
   render() {
-    const { clusters, value = {} } = this.props
+    const {
+      clusters,
+      value: { disabled },
+    } = this.props
+    const { cluster, namespace, role } = this.state
 
     return (
-      <ObjectInput value={value}>
+      <div className={styles.selectWrapper}>
         <Select
           name="cluster"
+          value={cluster}
+          disabled={disabled}
           options={clusters}
           placeholder={t('Please select a cluster')}
           valueRenderer={option => `${t('Cluster')}: ${option.value}`}
@@ -123,7 +164,9 @@ export default class DevopsSelect extends Component {
           onChange={this.handleClusterChange}
         />
         <Select
-          name="devops"
+          name="namespace"
+          value={namespace}
+          disabled={disabled}
           options={this.devops}
           placeholder={t('Please select a DevOps project')}
           valueRenderer={option => `${t('DevOps')}: ${option.value}`}
@@ -132,7 +175,9 @@ export default class DevopsSelect extends Component {
         />
         <Select
           name="role"
-          options={this.role}
+          value={role}
+          disabled={disabled}
+          options={this.roles}
           valueRenderer={option =>
             `${t('DEVOPS_PROJECT_ROLES')}: ${option.value}`
           }
@@ -140,7 +185,7 @@ export default class DevopsSelect extends Component {
           placeholder={t('Please select a project role')}
           onChange={this.handleRoleChange}
         />
-      </ObjectInput>
+      </div>
     )
   }
 }

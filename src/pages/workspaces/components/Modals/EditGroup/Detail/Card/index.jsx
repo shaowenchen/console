@@ -18,9 +18,12 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import { get } from 'lodash'
 
 import { Button } from '@kube-design/components'
 import { Avatar } from 'components/Base'
+
+import { getDisplayName } from 'utils'
 
 import styles from './index.scss'
 
@@ -35,6 +38,7 @@ export default class GroupCard extends React.Component {
   renderContent() {
     const {
       treeNode: { children = [] },
+      deleteKeys,
       onEdit,
       onDelete,
     } = this.props
@@ -48,10 +52,19 @@ export default class GroupCard extends React.Component {
               className={styles.avatar}
               icon="group"
               iconSize={32}
-              title={item.group_name}
-              desc={item.alias_name}
+              title={getDisplayName({
+                name: item.group_name,
+                aliasName: item.alias_name,
+              })}
+              desc={get(
+                item._originData,
+                'metadata.annotations.["kubesphere.io/workspace-role"]'
+              )}
             />
             <div>
+              <span className="text-second padding-20">
+                {deleteKeys.includes(item.group_id) && t('deleting')}
+              </span>
               <Button icon="pen" type="flat" onClick={() => onEdit(item)} />
               <Button icon="trash" type="flat" onClick={() => onDelete(item)} />
             </div>

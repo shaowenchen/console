@@ -19,35 +19,28 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { observer } from 'mobx-react'
-import Tree from 'components/Tree/index'
+import Tree from 'components/Tree'
 import styles from './index.scss'
 
 @observer
-export default class GroupTree extends React.Component {
+export default class Department extends React.Component {
   static propTypes = {
     treeData: PropTypes.array,
   }
 
-  componentDidMount() {
-    this.props.onRef(this)
-  }
-
   render() {
-    const { treeData, onSelect } = this.props
+    const { treeData, groupId, onSelect } = this.props
 
     return (
       <div className={styles.treeWrapper}>
-        {treeData.length > 0 ? (
+        {treeData[0].children.length > 0 ? (
           <Tree
             className={styles.tree}
             showLine
-            defaultExpandedKeys={['root']}
-            defaultSelectedKeys={['root']}
+            defaultExpandedKeys={[groupId || 'root']}
+            defaultSelectedKeys={[groupId || 'root']}
             onSelect={onSelect}
             treeData={treeData}
-            ref={n => {
-              this.tree = n
-            }}
           />
         ) : (
           <p>{t('NO_DEPARTMENT_TIP')}</p>

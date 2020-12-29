@@ -19,63 +19,93 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { observer } from 'mobx-react'
-import { isEmpty, get } from 'lodash'
+import { get, set, cloneDeep } from 'lodash'
 
 import { Notify } from '@kube-design/components'
 import DeleteModal from 'components/Modals/Delete'
 
-import GroupForm from './Form'
-import GroupCard from './Card'
+import { safeParseJSON } from 'utils'
+
+import Form from './Form'
+import Card from './Card'
 
 import styles from './index.scss'
 
 @observer
-export default class GroupDetail extends Component {
+export default class Detail extends Component {
   static propTypes = {
     treeNode: PropTypes.object,
-    showForm: PropTypes.bool,
     groupId: PropTypes.string,
-    groupName: PropTypes.string,
   }
 
   constructor(props) {
     super(props)
-    this.state = {
-      groupNode: props.treeNode,
-      showForm: props.showForm,
-      mode: 'create',
-      formTemplate: {
-        Group: { name: '' },
-        WorkspaceRoleBinding: [],
-        RoleBinding: [],
+
+    this.initialFormTemplate = {
+      apiVersion: 'iam.kubesphere.io/v1alpha2',
+      kind: 'Group',
+      metadata: {
+        annotations: {
+          'kubesphere.io/workspace-role': `${props.workspace}-regular`,
+        },
+        labels: {
+          'kubesphere.io/workspace': 'wsp1',
+        },
       },
+    }
+
+    this.state = {
+      treeNode: props.treeNode,
+      mode: 'create',
+      formTemplate: cloneDeep(this.initialFormTemplate),
       showConfirm: false,
       resource: '',
+      deleteKeys: [],
     }
     this.store = props.store
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (this.props.treeNode !== prevState.groupNode) {
-      this.setState({ groupNode: this.props.treeNode })
+    if (this.props.treeNode !== prevState.treeNode) {
+      this.setState({ treeNode: this.props.treeNode })
     }
-    if (this.props.showForm !== prevState.showForm) {
-      this.setState({ showForm: this.props.showForm })
-    }
+  }
+
+  isEmptyTreeNode(treeNode) {
+    return (
+      !treeNode.group_id ||
+      (treeNode.group_id === 'root' && !treeNode.children.length)
+    )
+  }
+
+  getRoleJSON(roles, result) {
+    return roles.map(item => {
+      const data = result.find(
+        v =>
+          get(v, 'metadata.namespace') === item.namespace &&
+          get(v, 'roleRef.name') === item.role
+      )
+      return {
+        ...item,
+        name: get(data, 'metadata.name'),
+        disabled: true,
+      }
+    })
   }
 
   handleAdd = () => {
     this.setState({
-      showForm: true,
       mode: 'create',
-      formTemplate: {},
+      formTemplate: cloneDeep(this.initialFormTemplate),
     })
+    this.props.toggleForm()
   }
 
   handleDelete = item => {
     this.setState({
       showConfirm: true,
       resource: item,
+      deleteKeys: [item.group_id],
     })
   }
 
@@ -84,12 +114,10 @@ export default class GroupDetail extends Component {
     const {
       resource: { group_id },
     } = this.state
+
     this.store.deleteGroup(group_id, { workspace }).then(() => {
+      this.setState({ showConfirm: false, deleteKeys: [group_id] })
       Notify.success({ content: `${t('Deleted Successfully')}!` })
-      this.store.fetchGroup({ workspace })
-      this.setState({
-        showConfirm: false,
-      })
     })
   }
 
@@ -97,67 +125,71 @@ export default class GroupDetail extends Component {
     this.setState({ showConfirm: false })
   }
 
-  handleEdit = async item => {
+  handleEdit = async node => {
     const { workspace } = this.props
-    const { group } = { group: item.group_name }
-    const requests = [
-      this.store.getWorksapceRoleBinding({
-        group,
-        workspace,
-      }),
-      this.store.getRoleBinding({
-        group,
-        workspace,
-      }),
-      this.store.getDevOpsRoleBinding({
-        group,
-        workspace,
-      }),
-    ]
-    const result = await Promise.all(requests)
-    const [WorkspaceRoleBinding, RoleBinding] = result
-    this.setState({
-      showForm: true,
-      mode: 'edit',
-      formTemplate: {
-        Group: {
-          name: item.title,
-          annotations: get(item.originData, 'metadata.annotations'),
-        },
-        WorkspaceRoleBinding: {
-          role: WorkspaceRoleBinding.map(role => get(role, 'roleRef.name')),
-        },
-        projectItems: RoleBinding.map(v => ({
-          cluster: get(v, 'metadata.namespace'),
-          role: get(v, 'roleRef.name'),
-        })),
-      },
+    const result = await this.store.getRoleBinding(node.group_name, {
+      workspace,
     })
+    const formData = cloneDeep(node._originData)
+    const projectRoles = get(
+      formData,
+      'metadata.annotations["kubesphere.io/project-roles"]',
+      []
+    )
+    const devopsRoles = get(
+      formData,
+      'metadata.annotations["kubesphere.io/devops-roles"]',
+      []
+    )
+    set(
+      formData,
+      'metadata.annotations["kubesphere.io/project-roles"]',
+      this.getRoleJSON(safeParseJSON(projectRoles), result)
+    )
+    set(
+      formData,
+      'metadata.annotations["kubesphere.io/devops-roles"]',
+      this.getRoleJSON(safeParseJSON(devopsRoles), result)
+    )
+    this.setState({
+      mode: 'edit',
+      formTemplate: formData,
+      treeNode: node,
+    })
+    this.props.toggleForm()
   }
 
-  handleSave = data => {
-    this.props.onOk(data, () => {
-      this.props.getTreeNodes(this.state.groupId)
-    })
+  handleSave = async (data, detail) => {
+    const { workspace } = this.props
+    if (detail) {
+      await this.store.update(data, detail, { workspace })
+      Notify.success({ content: `${t('Updated Successfully')}!` })
+    } else {
+      await this.store.create(data, { workspace })
+      Notify.success({ content: `${t('Added Successfully')}!` })
+    }
+
+    this.store.fetchGroup({ workspace })
+    this.props.toggleForm()
   }
 
   handleCancel = () => {
-    const { groupNode } = this.state
-    if (!isEmpty(groupNode)) {
+    const { treeNode } = this.props
+    if (!this.isEmptyTreeNode(treeNode)) {
       this.setState({
-        showForm: false,
-        formTemplate: {},
+        treeNode,
       })
+      this.props.toggleForm()
     } else {
       this.props.onCancel()
     }
   }
 
   renderBreadcrumbs() {
+    const { showForm } = this.props
     const {
-      groupNode: { path = [] },
       mode,
-      showForm,
+      treeNode: { path = [] },
     } = this.state
     let breadcrumbs = path
     if (showForm && mode === 'create') {
@@ -182,20 +214,20 @@ export default class GroupDetail extends Component {
 
   render() {
     const {
-      groupNode,
-      showForm,
       formTemplate,
       mode,
       showConfirm,
       resource: { group_name },
+      treeNode,
+      deleteKeys,
     } = this.state
-    const { groupId } = this.props
+    const { groupId, showForm } = this.props
 
     return (
       <div className={styles.detailWrapper}>
         {this.renderBreadcrumbs()}
         {showForm ? (
-          <GroupForm
+          <Form
             {...this.props}
             formTemplate={formTemplate}
             mode={mode}
@@ -204,8 +236,9 @@ export default class GroupDetail extends Component {
             onSave={this.handleSave}
           />
         ) : (
-          <GroupCard
-            treeNode={groupNode}
+          <Card
+            treeNode={treeNode}
+            deleteKeys={deleteKeys}
             onAdd={this.handleAdd}
             onEdit={this.handleEdit}
             onDelete={this.handleDelete}

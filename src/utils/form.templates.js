@@ -501,20 +501,6 @@ const getServiceMonitorTemplate = ({ name, namespace }) => ({
   spec: {},
 })
 
-const getGroupTemplate = ({ name, annotations = {}, labels = {} }) => ({
-  apiVersion: 'iam.kubesphere.io/v1alpha2',
-  kind: 'Group',
-  metadata: {
-    labels: {
-      'kubesphere.io/workspace': 'wsp1',
-      ...labels,
-    },
-    GenerateName: name,
-    annotations,
-  },
-  spec: {},
-})
-
 const getWorkspaceRoleBindingTemplate = ({ name, role }) => ({
   kind: 'WorkspaceRoleBinding',
   apiVersion: 'iam.kubesphere.io/v1alpha2',
@@ -578,7 +564,6 @@ const FORM_TEMPLATES = {
   dashboards: getDashboardTemplate,
   federated: getFederatedTemplate,
   servicemonitors: getServiceMonitorTemplate,
-  group: getGroupTemplate,
   workspacerolebinding: getWorkspaceRoleBindingTemplate,
   rolebinding: getRolebindingTemplate,
 }

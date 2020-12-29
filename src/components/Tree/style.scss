@@ -24,7 +24,12 @@
     height: $tree-node-height;
     display: flex;
     align-items: center;
-    cursor: pointer;
+    &.disabled {
+      .treeContent{
+        opacity: .5;
+        cursor: default;
+      }
+    }
   }
 
   .treeContent {
@@ -34,6 +39,7 @@
     border-radius: $tree-border-radius;
     display: flex;
     align-items: center;
+    cursor: pointer;
 
     &:hover {
       background-color: $tree-node-hover-bg;
@@ -53,6 +59,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
 
     &.open {
       :global {

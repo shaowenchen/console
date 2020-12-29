@@ -17,7 +17,7 @@
  */
 
 export default {
-  'Add members to': '添加成员到{group}',
+  'Add members to': '添加成员到 <strong>{group}<strong>',
   'Department name': '部门名称',
   principal: '负责人',
   'Add new department': '添加新的部门',
@@ -30,4 +30,5 @@ export default {
   'project roles': '项目角色',
   'Binding DevOps project role': '绑定 DevOps 工程角色',
   'Add DevOps project': '添加 DevOps 工程',
+  'Please add role': '请添加角色',
 }

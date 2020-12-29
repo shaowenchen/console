@@ -19,34 +19,14 @@ import { get } from 'lodash'
 import { Notify } from '@kube-design/components'
 import { Modal } from 'components/Base'
 
-import EditModal from 'components/Modals/GroupEdit'
 import DeleteModal from 'components/Modals/Delete'
 
 export default {
-  'group.edit': {
-    on({ store, workspace, success, ...props }) {
-      Modal.open({
-        onOk: (data, cb) => {
-          store.create(data, { workspace }).then(() => {
-            Notify.success({ content: `${t('Added Successfully')}!` })
-            success && success()
-            cb && cb()
-          })
-        },
-        modal: EditModal,
-        store,
-        formTemplate: {},
-        workspace,
-        ...props,
-      })
-    },
-  },
   'group.user.remove': {
     on({ store, detail, workspace, success, ...props }) {
       const modal = Modal.open({
         onOk: async () => {
-          const result = await store.getGroupBinding({
-            group: detail.group,
+          const result = await store.getGroupBinding(detail.group, {
             workspace,
           })
           const name = get(result.items[0], 'metadata.name')

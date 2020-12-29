@@ -17,7 +17,7 @@
  */
 
 export default {
-  'Add members to': 'Add members to {group}',
+  'Add members to': 'Add members to <strong>{group}</strong>',
   'Department name': 'Department name',
   principal: 'principal',
   'Add new department': 'Add new department',
@@ -31,4 +31,5 @@ export default {
   'project roles': 'project roles',
   'Binding Devops project role': 'Binding Devops project role',
   'Add DevOps project': 'Add DevOps project',
+  'Please add role': 'Please add role',
 }

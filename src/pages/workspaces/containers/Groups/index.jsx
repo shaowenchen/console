@@ -17,7 +17,6 @@
  */
 
 import React from 'react'
-import { observer, inject } from 'mobx-react'
 import { toJS } from 'mobx'
 import classnames from 'classnames'
 import { get, throttle } from 'lodash'
@@ -31,55 +30,54 @@ import {
   Notify,
 } from '@kube-design/components'
 import Banner from 'components/Cards/Banner'
+import withList, { ListPage } from 'components/HOCs/withList'
 
 import UserStore from 'stores/user'
 import GroupStore from 'stores/group'
-import { trigger } from 'utils/action'
 
+import EditGroupModal from 'workspaces/components/Modals/EditGroup'
 import GroupTree from './GroupTree'
 import GroupUser from './GroupUser'
 
 import styles from './index.scss'
 
-@inject('rootStore', 'workspaceStore')
-@observer
-@trigger
+@withList({
+  store: new GroupStore(),
+  module: 'groups',
+  injectStores: ['rootStore', 'workspaceStore'],
+})
 export default class Groups extends React.Component {
   constructor(props) {
     super(props)
-
+    this.store = props.store
     this.userStore = new UserStore()
-    this.groupStore = new GroupStore()
 
     this.state = {
       group: '',
       groupTitle: '',
       selectUserKeys: [],
       refreshFlag: false,
+      showModal: false,
     }
-  }
-
-  componentDidMount() {
-    this.fetchGroup()
   }
 
   componentWillUnmount() {
     this.unmount = true
   }
 
-  fetchGroup = refresh => {
+  fetchGroup = ({ refresh }) => {
     const { workspace } = this.props.match.params
-    this.groupStore.fetchGroup({ workspace }).then(() => {
+    this.store.fetchGroup({ workspace }).then(() => {
       if (!this.unmount) {
         if (refresh) {
           this.setState(prev => ({
             refreshFlag: !prev.refreshFlag,
           }))
         } else {
-          const { treeData } = this.groupStore
+          const { treeData } = this.store
           this.setState({
-            group: get(treeData[0], 'key'),
-            groupTitle: get(treeData[0], 'title'),
+            group: get(treeData[0], 'children[0].key'),
+            groupTitle: get(treeData[0], 'children[0].title'),
           })
         }
       }
@@ -87,7 +85,7 @@ export default class Groups extends React.Component {
   }
 
   handleRefresh = throttle(() => {
-    this.fetchGroup(true)
+    this.fetchGroup({ refresh: true })
   }, 1000)
 
   handleSelectTree = (key, { selectedNodes }) => {
@@ -116,7 +114,7 @@ export default class Groups extends React.Component {
       groupName: group,
     }))
 
-    this.groupStore
+    this.store
       .addGroupBinding(data, {
         workspace,
       })
@@ -130,13 +128,11 @@ export default class Groups extends React.Component {
   }
 
   showEditModal = () => {
-    this.trigger('group.edit', {
-      ...this.props.match.params,
-      title: t('Maintenance organization'),
-      store: this.groupStore,
-      workspaceStore: this.props.workspaceStore,
-      success: this.fetchGroup,
-    })
+    this.setState({ showModal: true })
+  }
+
+  hideModal = () => {
+    this.setState({ showModal: false })
   }
 
   renderBanner() {
@@ -198,11 +194,11 @@ export default class Groups extends React.Component {
   }
 
   render() {
-    const { treeData, total, isLoading } = toJS(this.groupStore)
-    const { group, selectUserKeys, refreshFlag } = this.state
+    const { treeData, total, isLoading } = toJS(this.store)
+    const { group, selectUserKeys, refreshFlag, showModal } = this.state
 
     return (
-      <div>
+      <ListPage {...this.props} getData={this.fetchGroup}>
         {this.renderBanner()}
         <div className={styles.wrapper}>
           {this.renderTitle()}
@@ -215,7 +211,7 @@ export default class Groups extends React.Component {
                 onSelect={this.handleSelectTree}
               />
               <GroupUser
-                groupStore={this.groupStore}
+                groupStore={this.store}
                 userStore={this.userStore}
                 group={group}
                 refreshFlag={refreshFlag}
@@ -226,7 +222,18 @@ export default class Groups extends React.Component {
             </div>
           </div>
         </div>
-      </div>
+        {showModal && (
+          <EditGroupModal
+            visible={showModal}
+            title={t('Maintenance organization')}
+            treeData={treeData}
+            store={this.store}
+            workspaceStore={this.props.workspaceStore}
+            onCancel={this.hideModal}
+            {...this.props.match.params}
+          />
+        )}
+      </ListPage>
     )
   }
 }

@@ -131,7 +131,10 @@ export default class GroupUser extends Component {
     this.trigger('group.user.remove', {
       store: this.props.groupStore,
       detail: toJS({ ...item, group: this.group }),
-      success: () => this.fetchIngroupData({ page: 1 }),
+      success: () => {
+        this.fetchIngroupData({ page: 1 })
+        this.fetchNotingroupData({ page: 1 })
+      },
       ...this.props.match.params,
     })
   }

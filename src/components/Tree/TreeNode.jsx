@@ -43,6 +43,7 @@ export default class TreeNode extends Component {
     children: PropTypes.node,
     title: PropTypes.node,
     pos: PropTypes.string,
+    disabled: PropTypes.bool,
   }
 
   static contextTypes = contextTypes
@@ -78,6 +79,19 @@ export default class TreeNode extends Component {
     return isLeaf || !hasChildren
   }
 
+  isDisabled = () => {
+    const { disabled } = this.props
+    const {
+      tree: { disabled: treeDisabled },
+    } = this.context
+
+    if (disabled === false) {
+      return false
+    }
+
+    return !!(treeDisabled || disabled)
+  }
+
   onExpand = e => {
     const {
       tree: { onNodeExpand },
@@ -86,6 +100,7 @@ export default class TreeNode extends Component {
   }
 
   onSelect = e => {
+    if (this.isDisabled()) return
     const {
       tree: { onNodeSelect },
     } = this.context
@@ -155,13 +170,15 @@ export default class TreeNode extends Component {
 
   render() {
     const { className, selected } = this.props
+    const disabled = this.isDisabled()
 
     return (
       <li className={classNames(styles.treeNode, className)}>
         <div
           className={classNames(
             styles.treeNodeWrap,
-            selected && styles.selected
+            !disabled && selected && styles.selected,
+            disabled && styles.disabled
           )}
         >
           {this.renderSwitcher()}

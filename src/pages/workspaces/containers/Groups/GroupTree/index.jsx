@@ -19,6 +19,7 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { observer } from 'mobx-react'
+import { set, get, cloneDeep } from 'lodash'
 
 import { Loading } from '@kube-design/components'
 
@@ -37,15 +38,17 @@ export default class GroupTree extends Component {
 
   renderTree = () => {
     const { treeData, onSelect } = this.props
+    const data = set(cloneDeep(treeData)[0], 'disabled', true)
+    const defaultKey = get(treeData[0].children[0], 'key', 'root')
 
     return (
       <Tree
         showLine
-        defaultExpandedKeys={['root']}
-        defaultSelectedKeys={['root']}
-        treeData={treeData}
+        defaultExpandedKeys={[defaultKey]}
+        defaultSelectedKeys={[defaultKey]}
+        treeData={data}
         onSelect={onSelect}
-      ></Tree>
+      />
     )
   }
 

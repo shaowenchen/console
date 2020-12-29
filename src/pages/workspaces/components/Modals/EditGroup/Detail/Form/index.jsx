@@ -20,13 +20,12 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { computed } from 'mobx'
 import { observer } from 'mobx-react'
-import { isEmpty, cloneDeep, set, get, concat } from 'lodash'
+import { cloneDeep, set } from 'lodash'
 
 import { Form, Input, Select, Button } from '@kube-design/components'
 import { ArrayInput } from 'components/Inputs'
 
 import { PATTERN_NAME } from 'utils/constants'
-import FORM_TEMPLATES from 'utils/form.templates'
 
 import RoleStore from 'stores/role'
 
@@ -51,6 +50,12 @@ export default class GroupForm extends React.Component {
 
     this.state = {
       formTemplate: cloneDeep(props.formTemplate),
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.formTemplate !== prevProps.formTemplate) {
+      this.setState({ formTemplate: cloneDeep(this.props.formTemplate) })
     }
   }
 
@@ -99,50 +104,41 @@ export default class GroupForm extends React.Component {
     })
   }
 
+  rolesValidator = (rule, value, callback) => {
+    if (!value) {
+      return callback()
+    }
+    if (value.length > 0) {
+      value.forEach(item => {
+        if (!item.cluster || !item.namespace || !item.role) {
+          return callback({ message: t('Please add role') })
+        }
+      })
+    }
+
+    callback()
+  }
+
   checkItemValid = value => value.role
 
   handleSave = () => {
-    const { onSave, groupId } = this.props
-    const { formTemplate } = this.state
+    const { onSave, groupId, mode } = this.props
+    const formData = cloneDeep(this.state.formTemplate)
     const form = this.formRef.current
-    const {
-      Group,
-      WorkspaceRoleBinding,
-      projectItems,
-      devopsItems,
-    } = formTemplate
-    const data = {}
-    const name = get(Group, 'name')
-    const RoleBinding = []
     form &&
       form.validate(() => {
         if (groupId) {
-          set(Group, 'labels["iam.kubesphere.io/group-parent"]', groupId)
-        }
-        data.Group = FORM_TEMPLATES['group'](Group)
-        if (!isEmpty(WorkspaceRoleBinding)) {
-          data.WorkspaceRoleBinding = WorkspaceRoleBinding.role.map(role =>
-            FORM_TEMPLATES['workspacerolebinding']({ name, role })
+          set(
+            formData,
+            'metadata.labels["iam.kubesphere.io/group-parent"]',
+            groupId
           )
         }
-
-        concat([], projectItems, devopsItems).forEach(item => {
-          if (item && item.role) {
-            RoleBinding.push(item)
-          }
-        })
-
-        if (!isEmpty(RoleBinding)) {
-          data.RoleBinding = RoleBinding.map(
-            ({ cluster, namespace, role }) => ({
-              body: [FORM_TEMPLATES['rolebinding']({ name, role })],
-              params: { cluster, namespace },
-            })
-          )
+        if (mode === 'edit') {
+          onSave(formData, this.props.formTemplate)
+        } else {
+          onSave(formData)
         }
-        // console.log(data)
-        // return
-        onSave(data)
       })
   }
 
@@ -166,7 +162,7 @@ export default class GroupForm extends React.Component {
             ]}
           >
             <Input
-              name="Group.name"
+              name="metadata.generateName"
               autoFocus={true}
               maxLength={63}
               autoComplete="off"
@@ -178,7 +174,7 @@ export default class GroupForm extends React.Component {
             desc={t('ALIAS_DESC')}
           >
             <Input
-              name="Group.annotations['kubesphere.io/alias-name']"
+              name="metadata.annotations['kubesphere.io/alias-name']"
               maxLength={63}
               autoComplete="off"
             />
@@ -188,17 +184,17 @@ export default class GroupForm extends React.Component {
             desc={t('WORKSPACE_ROLE_DESC')}
           >
             <Select
-              name="WorkspaceRoleBinding.role"
+              name="metadata.annotations['kubesphere.io/workspace-role']"
               options={this.workspaceRoles}
-              multi
-              closeOnSelect={false}
               onChange={this.handleRolesChange}
             />
           </Form.Item>
           <Form.Group label={t('Binding project role')}>
-            <Form.Item>
+            <Form.Item
+              rules={[{ validator: this.rolesValidator, checkOnSubmit: true }]}
+            >
               <ArrayInput
-                name="projectItems"
+                name="metadata.annotations['kubesphere.io/project-roles']"
                 itemType="object"
                 addText={t('Add project')}
                 checkItemValid={this.checkItemValid}
@@ -207,25 +203,31 @@ export default class GroupForm extends React.Component {
               </ArrayInput>
             </Form.Item>
           </Form.Group>
-          <Form.Group label={t('Binding DevOps project role')}>
-            <Form.Item>
-              <ArrayInput
-                name="devopsItems"
-                itemType="object"
-                addText={t('Add DevOps project')}
-                checkItemValid={this.checkItemValid}
+          {globals.app.hasKSModule('devops') && (
+            <Form.Group label={t('Binding DevOps project role')}>
+              <Form.Item
+                rules={[
+                  { validator: this.rolesValidator, checkOnSubmit: true },
+                ]}
               >
-                <DevopsSelect clusters={this.clusters} {...this.props} />
-              </ArrayInput>
-            </Form.Item>
-          </Form.Group>
-          <div className={styles.footer}>
-            <Button onClick={onCancel}>{t('Cancel')}</Button>
-            <Button type="primary" onClick={this.handleSave}>
-              {t('Save')}
-            </Button>
-          </div>
+                <ArrayInput
+                  name="metadata.annotations['kubesphere.io/devops-roles']"
+                  itemType="object"
+                  addText={t('Add DevOps project')}
+                  checkItemValid={this.checkItemValid}
+                >
+                  <DevopsSelect clusters={this.clusters} {...this.props} />
+                </ArrayInput>
+              </Form.Item>
+            </Form.Group>
+          )}
         </Form>
+        <div className={styles.footer}>
+          <Button onClick={onCancel}>{t('Cancel')}</Button>
+          <Button type="primary" onClick={this.handleSave}>
+            {t('Save')}
+          </Button>
+        </div>
       </div>
     )
   }

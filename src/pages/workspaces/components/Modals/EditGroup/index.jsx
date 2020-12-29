@@ -19,21 +19,20 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { observer } from 'mobx-react'
-import { toJS } from 'mobx'
+import { get } from 'lodash'
 
 import { Modal } from 'components/Base'
 
-import GroupTree from './GroupTree'
-import GroupDetail from './GroupDetail'
+import Department from './Department'
+import Detail from './Detail'
 
 import styles from './index.scss'
 
 @observer
-export default class GroupEdit extends React.Component {
+export default class EditGroupModal extends React.Component {
   static propTypes = {
     visible: PropTypes.bool,
     title: PropTypes.string,
-    onOk: PropTypes.func,
     onCancel: PropTypes.func,
   }
 
@@ -46,46 +45,49 @@ export default class GroupEdit extends React.Component {
     this.store = props.store
     this.state = {
       treeNode: {},
-      showForm: true,
+      showForm: false,
       groupId: '',
-      groupName: '',
     }
   }
 
   componentDidMount() {
-    const { treeData } = toJS(this.store)
-    if (treeData.length > 0) {
+    const { treeData } = this.props
+    if (get(treeData[0], 'children').length > 0) {
       this.setState({
         treeNode: treeData[0],
-        showForm: false,
         groupId: treeData[0].group_id,
-        groupName: treeData[0].group_name,
       })
+    } else {
+      this.setState({ showForm: true })
     }
   }
 
-  onRef = ref => {
-    this.child = ref
-  }
-
-  getTreeNodes = () => {
-    const treeNode = this.child.tree.getTreeNodes(this.state.groupId).props
-    this.setState({ treeNode })
+  toggleForm = () => {
+    this.setState(({ showForm }) => ({
+      showForm: !showForm,
+    }))
   }
 
   handleSelect = (key, { selectedNodes }) => {
     this.setState({
       showForm: false,
-      treeNode: selectedNodes[0].props,
       groupId: key[0],
-      groupName: selectedNodes[0].props.group_name,
+      treeNode: selectedNodes[0].props,
     })
   }
 
+  // @computed
+  // get treeNode() {
+  //   const { treeNode } = this.state
+  //   const { rowTreeData } = toJS(this.store)
+  //   const groupId = this.groupId
+  //   const children = rowTreeData.filter(node => node.parent_id === groupId)
+  //   return { ...treeNode, children }
+  // }
+
   render() {
-    const { visible, title, onCancel } = this.props
-    const { treeData } = toJS(this.store)
-    const { showForm, treeNode, groupId, groupName } = this.state
+    const { visible, title, onCancel, treeData } = this.props
+    const { showForm, treeNode, groupId } = this.state
 
     return (
       <Modal
@@ -99,18 +101,17 @@ export default class GroupEdit extends React.Component {
         footerClassName={styles.modalFooter}
       >
         <div className={styles.content}>
-          <GroupTree
-            onRef={this.onRef}
+          <Department
             treeData={treeData}
+            groupId={this.groupId}
             onSelect={this.handleSelect}
           />
-          <GroupDetail
+          <Detail
             {...this.props}
-            getTreeNodes={this.getTreeNodes}
             showForm={showForm}
+            toggleForm={this.toggleForm}
             treeNode={treeNode}
             groupId={groupId}
-            groupName={groupName}
           />
         </div>
       </Modal>

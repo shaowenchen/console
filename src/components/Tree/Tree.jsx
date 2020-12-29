@@ -58,10 +58,12 @@ export default class Tree extends Component {
     onSelect: PropTypes.func,
     onClick: PropTypes.func,
     onExpand: PropTypes.func,
+    disabled: PropTypes.bool,
   }
 
   static DefaultProps = {
     showLine: false,
+    disabled: false,
     toggleNodeSelect: false,
     defaultExpandedKeys: [],
     defaultSelectedKeys: [],
@@ -142,6 +144,7 @@ export default class Tree extends Component {
   getChildContext() {
     return {
       tree: {
+        disabled: this.props.disabled,
         renderTreeNode: this.renderTreeNode,
         onNodeClick: this.onNodeClick,
         onNodeExpand: this.onNodeExpand,

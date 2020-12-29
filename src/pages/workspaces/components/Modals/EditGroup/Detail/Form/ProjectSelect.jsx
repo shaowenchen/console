@@ -20,12 +20,14 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { computed } from 'mobx'
 import { observer } from 'mobx-react'
+import { isEqual } from 'lodash'
 
 import { Select, Icon } from '@kube-design/components'
-import { ObjectInput } from 'components/Inputs'
 
 import RoleStore from 'stores/role'
 import ProjectStore from 'stores/project'
+
+import styles from './index.scss'
 
 @observer
 export default class ProjectSelect extends Component {
@@ -41,19 +43,48 @@ export default class ProjectSelect extends Component {
     this.roleStore = new RoleStore()
 
     this.state = {
-      cluster: '',
-      namespace: '',
-      role: '',
+      cluster: props.value.cluster || '',
+      namespace: props.value.namespace || '',
+      role: props.value.role || '',
+    }
+  }
+
+  componentDidMount() {
+    this.fetchProjects()
+    this.fetchRoles()
+  }
+
+  componentDidUpdate(prevProps) {
+    if (!isEqual(prevProps.value, this.props.value)) {
+      this.setState(
+        {
+          cluster: this.props.value.cluster || '',
+          namespace: this.props.value.namespace || '',
+          role: this.props.value.role || '',
+        },
+        () => {
+          this.fetchProjects()
+          this.fetchRoles()
+        }
+      )
     }
   }
 
   @computed
   get projects() {
-    return this.projectStore.list.data.map(item => ({
-      label: item.name,
-      value: item.name,
-      item,
-    }))
+    const { arrayValue = [] } = this.props
+    return this.projectStore.list.data
+      .filter(item =>
+        arrayValue.every(
+          arrv =>
+            arrv.cluster !== this.state.cluster || arrv.namespace !== item.name
+        )
+      )
+      .map(item => ({
+        label: item.name,
+        value: item.name,
+        item,
+      }))
   }
 
   @computed
@@ -67,25 +98,29 @@ export default class ProjectSelect extends Component {
 
   fetchProjects() {
     const { cluster } = this.state
-    this.projectStore.fetchList({
-      workspace: this.props.workspace,
-      cluster,
-      labelSelector:
-        'kubefed.io/managed!=true, kubesphere.io/kubefed-host-namespace!=true',
-      limit: -1,
-      sortBy: 'createTime',
-    })
+    if (cluster) {
+      this.projectStore.fetchList({
+        workspace: this.props.workspace,
+        cluster,
+        labelSelector:
+          'kubefed.io/managed!=true, kubesphere.io/kubefed-host-namespace!=true',
+        limit: -1,
+        sortBy: 'createTime',
+      })
+    }
   }
 
   fetchRoles() {
     const { cluster, namespace } = this.state
-    this.roleStore.fetchList({
-      workspace: this.props.workspace,
-      cluster,
-      namespace,
-      limit: -1,
-      sortBy: 'createTime',
-    })
+    if (cluster && namespace) {
+      this.roleStore.fetchList({
+        workspace: this.props.workspace,
+        cluster,
+        namespace,
+        limit: -1,
+        sortBy: 'createTime',
+      })
+    }
   }
 
   handleChange = () => {
@@ -113,12 +148,17 @@ export default class ProjectSelect extends Component {
   }
 
   render() {
-    const { clusters, value = {} } = this.props
-
+    const {
+      clusters,
+      value: { disabled },
+    } = this.props
+    const { cluster, namespace, role } = this.state
     return (
-      <ObjectInput value={value}>
+      <div className={styles.selectWrapper}>
         <Select
           name="cluster"
+          value={cluster}
+          disabled={disabled}
           options={clusters}
           placeholder={t('Please select a cluster')}
           valueRenderer={option => `${t('Cluster')}: ${option.value}`}
@@ -127,6 +167,8 @@ export default class ProjectSelect extends Component {
         />
         <Select
           name="namespace"
+          value={namespace}
+          disabled={disabled}
           options={this.projects}
           placeholder={t('Please select a project')}
           valueRenderer={option => `${t('Project')}: ${option.value}`}
@@ -135,13 +177,15 @@ export default class ProjectSelect extends Component {
         />
         <Select
           name="role"
+          value={role}
+          disabled={disabled}
           options={this.roles}
           valueRenderer={option => `${t('Project Role')}: ${option.value}`}
           prefixIcon={<Icon name="role" size={16} />}
           placeholder={t('Please select a project role')}
           onChange={this.handleRoleChange}
         />
-      </ObjectInput>
+      </div>
     )
   }
 }

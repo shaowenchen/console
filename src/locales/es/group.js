@@ -17,7 +17,7 @@
  */
 
 export default {
-  'Add member to': 'Add member to {group}',
+  'Add members to': 'Añadir un comentario <strong>{group}<strong>',
   'Department name': 'Nombre de Departamento',
   principal: 'persona a cargo',
   'Add new department': 'Agregar nuevo departamento',
@@ -31,4 +31,5 @@ export default {
   'project roles': 'roles de proyecto',
   'Binding Devops project role': 'Rol del proyecto Binding Devops',
   'Add DevOps project': 'Agregar proyecto DevOps',
+  'Please add role': 'Añadir papel',
 }
