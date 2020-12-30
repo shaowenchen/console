@@ -148,7 +148,7 @@ export default class Detail extends Component {
     )
     const { workspace } = this.props
     const clusters = uniq([...projectRoles, ...devopsRoles].map(v => v.cluster))
-    const result = await this.store.fetchRoleBinding(node.group_name, {
+    const result = await this.store.fetchRoleBinding(node.group_id, {
       workspace,
       clusters,
     })
@@ -177,7 +177,7 @@ export default class Detail extends Component {
       await this.store.update(data, detail, { workspace })
       Notify.success({ content: `${t('Updated Successfully')}!` })
     } else {
-      await this.store.create(data, { workspace })
+      await this.store.createGroup(data, { workspace })
       Notify.success({ content: `${t('Added Successfully')}!` })
     }
 

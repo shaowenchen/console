@@ -17,7 +17,7 @@
  */
 
 import { observable, action } from 'mobx'
-import { get, set } from 'lodash'
+import { get, set, cloneDeep } from 'lodash'
 import { formatTreeData, flattenTreeData } from 'utils/group'
 import FORM_TEMPLATES from 'utils/form.templates'
 import Base from './base'
@@ -114,11 +114,6 @@ export default class GroupStore extends Base {
 
   @action
   create(data, params) {
-    const name = get(data, 'metadata.generateName')
-    const workspaceRole = get(
-      data,
-      'metadata.annotations["kubesphere.io/workspace-role"]'
-    )
     const projectRoles = get(
       data,
       'metadata.annotations["kubesphere.io/project-roles"]',
@@ -141,14 +136,34 @@ export default class GroupStore extends Base {
       JSON.stringify(devopsRoles)
     )
 
+    return this.submitting(request.post(this.getResourceUrl(params), data))
+  }
+
+  @action
+  async createGroup(data, params) {
+    const result = await this.create(cloneDeep(data), params)
+    const name = get(result, 'metadata.name')
+    const workspaceRole = get(
+      data,
+      'metadata.annotations["kubesphere.io/workspace-role"]'
+    )
+    const projectRoles = get(
+      data,
+      'metadata.annotations["kubesphere.io/project-roles"]',
+      []
+    )
+    const devopsRoles = get(
+      data,
+      'metadata.annotations["kubesphere.io/devops-roles"]',
+      []
+    )
+
     const requests = [
-      request.post(this.getResourceUrl(params), data),
       this.addWorksapceRoleBinding(
         [FORM_TEMPLATES['workspacerolebinding']({ name, role: workspaceRole })],
         params
       ),
     ]
-
     const rolebinds = [...projectRoles, ...devopsRoles]
 
     if (rolebinds.length > 0) {
@@ -165,14 +180,12 @@ export default class GroupStore extends Base {
           )
       )
     }
-
     return this.submitting(Promise.all(requests))
   }
 
   @action
   async update(data, detail, params) {
     const name = get(data, 'metadata.name')
-    const generateName = get(data, 'metadata.generateName')
     const patchData = {}
     const aliasName = get(
       data,
@@ -224,11 +237,11 @@ export default class GroupStore extends Base {
     )
     if (workspaceRole !== oldWorkspaceRole) {
       const worksapceRoleBindingResult = await this.getWorksapceRoleBinding(
-        generateName,
+        name,
         params
       )
       await this.deleteWorksapceRoleBinding(
-        get(worksapceRoleBindingResult[0], 'metadata.name'),
+        get(worksapceRoleBindingResult, 'items[0].metadata.name'),
         params
       )
       requests.push(
@@ -268,7 +281,7 @@ export default class GroupStore extends Base {
   }
 
   getUpdateRolebindsRequests(newRolebinds, oldRolebinds, data) {
-    const generateName = get(data, 'metadata.generateName')
+    const groupId = get(data, 'metadata.name')
     const requests = []
     newRolebinds.forEach(nrb => {
       const { role, namespace, cluster } = nrb
@@ -281,7 +294,7 @@ export default class GroupStore extends Base {
       if (!orb) {
         requests.push(
           this.addRolebindings(
-            [FORM_TEMPLATES['rolebinding']({ name: generateName, role })],
+            [FORM_TEMPLATES['rolebinding']({ name: groupId, role })],
             {
               cluster,
               namespace,
