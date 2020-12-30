@@ -40,10 +40,20 @@ export const formatTreeData = (treeData, rootName) => {
     .filter(item => item)
 }
 
-export const formatRowTreeData = treeData => {
-  const obj = {}
-  return treeData.reduce((item, next) => {
-    if (!obj[next.group_id]) obj[next.group_id] = true && item.push(next)
-    return item
-  }, [])
+export const flattenTreeData = treeData => {
+  const treeMap = {}
+
+  const walk = data => {
+    if (data.group_id) {
+      treeMap[data.group_id] = data
+    }
+
+    if (data.children.length > 0) {
+      return data.children.map(item => walk(item))
+    }
+  }
+
+  treeData.map(walk)
+
+  return treeMap
 }

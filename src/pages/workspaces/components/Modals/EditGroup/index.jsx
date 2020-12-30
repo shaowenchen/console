@@ -44,9 +44,9 @@ export default class EditGroupModal extends React.Component {
     super(props)
     this.store = props.store
     this.state = {
-      treeNode: {},
       showForm: false,
       groupId: '',
+      treeNodeId: 'root',
     }
   }
 
@@ -54,7 +54,6 @@ export default class EditGroupModal extends React.Component {
     const { treeData } = this.props
     if (get(treeData[0], 'children').length > 0) {
       this.setState({
-        treeNode: treeData[0],
         groupId: treeData[0].group_id,
       })
     } else {
@@ -68,26 +67,17 @@ export default class EditGroupModal extends React.Component {
     }))
   }
 
-  handleSelect = (key, { selectedNodes }) => {
+  handleSelect = keys => {
     this.setState({
       showForm: false,
-      groupId: key[0],
-      treeNode: selectedNodes[0].props,
+      groupId: keys[0],
+      treeNodeId: keys[0],
     })
   }
 
-  // @computed
-  // get treeNode() {
-  //   const { treeNode } = this.state
-  //   const { rowTreeData } = toJS(this.store)
-  //   const groupId = this.groupId
-  //   const children = rowTreeData.filter(node => node.parent_id === groupId)
-  //   return { ...treeNode, children }
-  // }
-
   render() {
     const { visible, title, onCancel, treeData } = this.props
-    const { showForm, treeNode, groupId } = this.state
+    const { showForm, groupId, treeNodeId } = this.state
 
     return (
       <Modal
@@ -110,8 +100,8 @@ export default class EditGroupModal extends React.Component {
             {...this.props}
             showForm={showForm}
             toggleForm={this.toggleForm}
-            treeNode={treeNode}
             groupId={groupId}
+            treeNodeId={treeNodeId}
           />
         </div>
       </Modal>

@@ -17,9 +17,10 @@
  */
 
 import React from 'react'
-import { toJS } from 'mobx'
+import { inject, observer } from 'mobx-react'
+import { toJS, reaction } from 'mobx'
 import classnames from 'classnames'
-import { get, throttle } from 'lodash'
+import { get, debounce, throttle } from 'lodash'
 
 import {
   Icon,
@@ -30,8 +31,8 @@ import {
   Notify,
 } from '@kube-design/components'
 import Banner from 'components/Cards/Banner'
-import withList, { ListPage } from 'components/HOCs/withList'
 
+import WebsocketStore from 'stores/websocket'
 import UserStore from 'stores/user'
 import GroupStore from 'stores/group'
 
@@ -41,16 +42,14 @@ import GroupUser from './GroupUser'
 
 import styles from './index.scss'
 
-@withList({
-  store: new GroupStore(),
-  module: 'groups',
-  injectStores: ['rootStore', 'workspaceStore'],
-})
+@inject('rootStore', 'workspaceStore')
+@observer
 export default class Groups extends React.Component {
   constructor(props) {
     super(props)
-    this.store = props.store
+    this.store = new GroupStore()
     this.userStore = new UserStore()
+    this.websocket = new WebsocketStore()
 
     this.state = {
       group: '',
@@ -61,11 +60,40 @@ export default class Groups extends React.Component {
     }
   }
 
-  componentWillUnmount() {
-    this.unmount = true
+  componentDidMount() {
+    this.fetchGroup()
+    this.initWebsocket()
   }
 
-  fetchGroup = ({ refresh }) => {
+  componentWillUnmount() {
+    this.unmount = true
+    this.websocket.close()
+    this.disposer && this.disposer()
+  }
+
+  initWebsocket = () => {
+    const url = this.store.getWatchListUrl({ ...this.props.match.params })
+    if (url) {
+      this.websocket.watch(url)
+
+      const _getData = debounce(this.fetchGroup, 1000)
+
+      this.disposer = reaction(
+        () => this.websocket.message,
+        message => {
+          if (
+            message.type === 'MODIFIED' ||
+            message.type === 'ADDED' ||
+            message.type === 'DELETED'
+          ) {
+            _getData()
+          }
+        }
+      )
+    }
+  }
+
+  fetchGroup = refresh => {
     const { workspace } = this.props.match.params
     this.store.fetchGroup({ workspace }).then(() => {
       if (!this.unmount) {
@@ -85,7 +113,7 @@ export default class Groups extends React.Component {
   }
 
   handleRefresh = throttle(() => {
-    this.fetchGroup({ refresh: true })
+    this.fetchGroup(true)
   }, 1000)
 
   handleSelectTree = (key, { selectedNodes }) => {
@@ -194,11 +222,11 @@ export default class Groups extends React.Component {
   }
 
   render() {
-    const { treeData, total, isLoading } = toJS(this.store)
+    const { treeData, rowTreeData, total, isLoading } = toJS(this.store)
     const { group, selectUserKeys, refreshFlag, showModal } = this.state
 
     return (
-      <ListPage {...this.props} getData={this.fetchGroup}>
+      <>
         {this.renderBanner()}
         <div className={styles.wrapper}>
           {this.renderTitle()}
@@ -227,13 +255,14 @@ export default class Groups extends React.Component {
             visible={showModal}
             title={t('Maintenance organization')}
             treeData={treeData}
+            rowTreeData={rowTreeData}
             store={this.store}
             workspaceStore={this.props.workspaceStore}
             onCancel={this.hideModal}
             {...this.props.match.params}
           />
         )}
-      </ListPage>
+      </>
     )
   }
 }

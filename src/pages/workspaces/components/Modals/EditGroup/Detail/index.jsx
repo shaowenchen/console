@@ -34,12 +34,14 @@ import styles from './index.scss'
 @observer
 export default class Detail extends Component {
   static propTypes = {
-    treeNode: PropTypes.object,
+    rowTreeData: PropTypes.object,
     groupId: PropTypes.string,
   }
 
   constructor(props) {
     super(props)
+
+    this.store = props.store
 
     this.initialFormTemplate = {
       apiVersion: 'iam.kubesphere.io/v1alpha2',
@@ -55,20 +57,31 @@ export default class Detail extends Component {
     }
 
     this.state = {
-      treeNode: props.treeNode,
+      treeNode: this.getTreeNode(props),
+      treeNodeId: props.treeNodeId,
       mode: 'create',
       formTemplate: cloneDeep(this.initialFormTemplate),
       showConfirm: false,
       resource: '',
       deleteKeys: [],
     }
-    this.store = props.store
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (this.props.treeNode !== prevState.treeNode) {
-      this.setState({ treeNode: this.props.treeNode })
+    if (
+      this.props.treeNodeId !== prevState.treeNodeId ||
+      this.props.rowTreeData !== prevProps.rowTreeData
+    ) {
+      this.setState({
+        treeNodeId: this.props.treeNodeId,
+        treeNode: this.getTreeNode(this.props),
+      })
     }
+  }
+
+  getTreeNode(props) {
+    const { treeNodeId, rowTreeData } = props
+    return rowTreeData[treeNodeId] || {}
   }
 
   isEmptyTreeNode(treeNode) {
@@ -153,6 +166,7 @@ export default class Detail extends Component {
       mode: 'edit',
       formTemplate: formData,
       treeNode: node,
+      treeNodeId: node.group_id,
     })
     this.props.toggleForm()
   }
@@ -167,16 +181,13 @@ export default class Detail extends Component {
       Notify.success({ content: `${t('Added Successfully')}!` })
     }
 
-    this.store.fetchGroup({ workspace })
     this.props.toggleForm()
   }
 
   handleCancel = () => {
-    const { treeNode } = this.props
+    const treeNode = this.getTreeNode(this.props)
     if (!this.isEmptyTreeNode(treeNode)) {
-      this.setState({
-        treeNode,
-      })
+      this.setState({ treeNode })
       this.props.toggleForm()
     } else {
       this.props.onCancel()

@@ -18,7 +18,7 @@
 
 import { observable, action } from 'mobx'
 import { get, set } from 'lodash'
-import { formatTreeData, formatRowTreeData } from 'utils/group'
+import { formatTreeData, flattenTreeData } from 'utils/group'
 import FORM_TEMPLATES from 'utils/form.templates'
 import Base from './base'
 
@@ -29,7 +29,7 @@ export default class GroupStore extends Base {
   treeData = []
 
   @observable
-  rowTreeData = []
+  rowTreeData = {}
 
   get apiVersion() {
     return 'kapis/iam.kubesphere.io/v1alpha2'
@@ -89,6 +89,7 @@ export default class GroupStore extends Base {
       _originData: item,
     }))
     this.total = get(result, 'totalItems')
+
     this.treeData = [
       {
         key: 'root',
@@ -99,7 +100,7 @@ export default class GroupStore extends Base {
         children: formatTreeData(data, workspace),
       },
     ]
-    this.rowTreeData = formatRowTreeData(data)
+    this.rowTreeData = flattenTreeData(this.treeData)
     this.isLoading = false
     this.list.update({
       data,
