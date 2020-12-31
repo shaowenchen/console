@@ -5,6 +5,7 @@ on:
     types: [created]
 env:
   IMAGE_NAME: ks-console:actions-pr-${{ github.event.issue.number }}
+  SERVICE_NAME: ks-console-actions-pr-${{ github.event.issue.number }}
 
 jobs:
   deploy-check:
@@ -23,7 +24,8 @@ jobs:
   
   build-and-push:
     if: needs.deploy-check.outputs.triggered == 'true'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+    needs: deploy-check
     strategy:
       matrix:
         node-version: [12.18.x]
@@ -54,8 +56,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy-check
     if: needs.deploy-check.outputs.triggered == 'true'
-    env:
-      SERVICE_PORT: 30880
     steps:
       - name: get pull request ref
         id: get_pull_request_ref
@@ -104,10 +104,10 @@ jobs:
           password: ${{ secrets.QING_PASSWORD }}
           port: 22
           script: |
-            kubectl -n kubesphere-system get deploy ks-console --export -o yaml | sed "s/kubesphere\/ks-console:v3.0.0/kubespheredev\/${{ env.IMAGE_NAME }}/g" | sed "s/app:\ ks-console/app:\ ${{ env.IMAGE_NAME }}/g" | sed "0,/name:\ ks-console/{s/name:\ ks-console/name:\ ${{ env.IMAGE_NAME }}/}" | kubectl apply -n kubesphere-system -f -
+            kubectl -n kubesphere-system get deploy ks-console --export -o yaml | sed "s/kubesphere\/ks-console:v3.0.0/kubespheredev\/${{ env.IMAGE_NAME }}/g" | sed "s/app:\ ks-console/app:\ ${{ env.SERVICE_NAME }}/g" | sed "0,/name:\ ks-console/{s/name:\ ks-console/name:\ ${{ env.SERVICE_NAME }}/}" | kubectl apply -n kubesphere-system -f -
 
-            kubectl -n kubesphere-system expose deployment ${{ env.IMAGE_NAME }} --type=NodePort --port=80 --target-port=8000
-            export service_port=`kubectl -n kubesphere-system get svc ${{ env.IMAGE_NAME }} -o json | jq .spec.ports[].nodePort`
+            kubectl -n kubesphere-system expose deployment ${{ env.SERVICE_NAME }} --type=NodePort --port=80 --target-port=8000
+            export service_port=`kubectl -n kubesphere-system get svc ${{ env.SERVICE_NAME }} -o json | jq .spec.ports[].nodePort`
             echo "::set-env name=SERVICE_PORT::$service_port"
 
       - name: set deployment status to success
@@ -134,7 +134,7 @@ jobs:
           repository: ${{ github.repository }}
           deployment: ${{ fromJson(steps.create_deployment.outputs.data).id }}
           environment: dev
-          environment_url: http://${{ secrets.QING_EIP }}:${{ env.SERVICE_PORT }}/
+          environment_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           mediaType: '{"previews": ["ant-man"]}'
           state: failure

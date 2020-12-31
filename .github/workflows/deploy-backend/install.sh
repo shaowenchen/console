@@ -15,7 +15,8 @@ function wait_status_ok(){
     done
 }
 
-yum install -y vim openssl socat conntrack ipset wget
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+yum install -y vim openssl socat conntrack ipset wget jq
 wget https://github.com/kubesphere/kubekey/releases/download/v1.0.0/kubekey-v1.0.0-linux-amd64.tar.gz
 tar xvf kubekey-v1.0.0-linux-amd64.tar.gz
 ls -al
