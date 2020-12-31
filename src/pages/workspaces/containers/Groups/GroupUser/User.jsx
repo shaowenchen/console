@@ -40,7 +40,7 @@ export default class UserItem extends React.Component {
   }
 
   render() {
-    const { user, showDelete, onDelete } = this.props
+    const { user, showDelete, onDelete, group } = this.props
 
     return (
       <div className={styles.item} data-user={user.username}>
@@ -51,7 +51,7 @@ export default class UserItem extends React.Component {
           title={user.name}
           desc={user.email}
         />
-        {!showDelete && this.renderButton()}
+        {!showDelete && group && this.renderButton()}
         {showDelete && (
           <Button type="flat" onClick={onDelete}>
             <Icon name="trash" size={16} />

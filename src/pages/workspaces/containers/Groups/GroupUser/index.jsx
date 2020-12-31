@@ -49,12 +49,13 @@ export default class GroupUser extends Component {
 
   constructor(props) {
     super(props)
-    this.group = props.group
     this.userStore = props.userStore
     this.groupStore = props.groupStore
 
     this.state = {
       type: 'ingroup',
+      group: props.group,
+      search: '',
     }
     this.configs = this.getConfigs()
   }
@@ -64,9 +65,10 @@ export default class GroupUser extends Component {
       prevProps.refreshFlag !== this.props.refreshFlag ||
       prevProps.group !== this.props.group
     ) {
-      this.group = this.props.group
-      this.fetchIngroupData()
-      this.fetchNotingroupData()
+      this.setState({ group: this.props.group }, () => {
+        this.fetchIngroupData()
+        this.fetchNotingroupData()
+      })
     }
   }
 
@@ -84,7 +86,7 @@ export default class GroupUser extends Component {
   ]
 
   getCount = type => {
-    return this.group ? this.userStore[type].total : 0
+    return this.userStore[type].total || 0
   }
 
   getColor = value => {
@@ -93,18 +95,22 @@ export default class GroupUser extends Component {
   }
 
   fetchNotingroupData = (params = {}) => {
+    const { group, search } = this.state
     this.userStore.fetchGroupUser({
       ...params,
-      notingroup: this.group,
+      notingroup: group,
+      name: search,
       type: 'notingroup',
       limit: 10,
     })
   }
 
   fetchIngroupData = (params = {}) => {
+    const { group, search } = this.state
     this.userStore.fetchGroupUser({
       ...params,
-      ingroup: this.group,
+      ingroup: group,
+      name: search,
       type: 'ingroup',
       limit: 10,
     })
@@ -115,12 +121,10 @@ export default class GroupUser extends Component {
   }
 
   handleSearch = value => {
-    const { type } = this.state
-    if (type === 'ingroup') {
-      this.fetchIngroupData({ name: value })
-    } else {
-      this.fetchNotingroupData({ name: value })
-    }
+    this.setState({ search: value }, () => {
+      this.fetchIngroupData()
+      this.fetchNotingroupData()
+    })
   }
 
   handleSelect = user => {
@@ -130,7 +134,7 @@ export default class GroupUser extends Component {
   handleDelete = item => {
     this.trigger('group.user.remove', {
       store: this.props.groupStore,
-      detail: toJS({ ...item, group: this.group }),
+      detail: toJS({ ...item, group: this.state.group }),
       success: () => {
         this.fetchIngroupData({ page: 1 })
         this.fetchNotingroupData({ page: 1 })
@@ -155,9 +159,10 @@ export default class GroupUser extends Component {
               </RadioButton>
             ))}
           </RadioGroup>
-          {this.props.group && (
+          {this.state.group && (
             <InputSearch
               className={styles.search}
+              value={this.state.search}
               onSearch={this.handleSearch}
               placeholder={t('Search by name')}
             />
@@ -171,6 +176,11 @@ export default class GroupUser extends Component {
     const { type, onFetch } = tab
     const { data = [], total, page, isLoading } = toJS(this.userStore[type])
     const { selectedKeys } = this.props
+    const { group } = this.state
+
+    if (!group && type === 'ingroup') {
+      return this.renderPlaceHolder()
+    }
 
     return (
       <ScrollLoad
@@ -184,6 +194,7 @@ export default class GroupUser extends Component {
           <User
             key={`${type}-${item.name}`}
             user={item}
+            group={group}
             showDelete={type === 'ingroup'}
             selected={selectedKeys.includes(item.name)}
             onSelect={() => this.handleSelect(item)}
@@ -200,7 +211,6 @@ export default class GroupUser extends Component {
 
   render() {
     const { type } = this.state
-    const { group } = this.props
 
     return (
       <div className={styles.userWrapper}>
@@ -214,7 +224,7 @@ export default class GroupUser extends Component {
               )}
               key={tab.type}
             >
-              {!group ? this.renderPlaceHolder() : this.renderUserItem(tab)}
+              {this.renderUserItem(tab)}
             </div>
           ))}
         </div>

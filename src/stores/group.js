@@ -388,11 +388,11 @@ export default class GroupStore extends Base {
     )
   }
 
-  @action getGroupBinding(group, params = {}) {
+  @action getGroupBinding({ group, user }, params = {}) {
     return request.get(
       `${this.apiVersion}${this.getPath(params)}/groupbindings`,
       {
-        labelSelector: `iam.kubesphere.io/group-ref=${group}`,
+        labelSelector: `iam.kubesphere.io/group-ref=${group},iam.kubesphere.io/user-ref=${user}`,
       }
     )
   }

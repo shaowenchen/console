@@ -104,8 +104,8 @@ export default class Groups extends React.Component {
         } else {
           const { treeData } = this.store
           this.setState({
-            group: get(treeData[0], 'children[0].key'),
-            groupTitle: get(treeData[0], 'children[0].title'),
+            group: get(treeData[0], 'children[0].key', ''),
+            groupTitle: get(treeData[0], 'children[0].group_name', ''),
           })
         }
       }

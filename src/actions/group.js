@@ -26,9 +26,12 @@ export default {
     on({ store, detail, workspace, success, ...props }) {
       const modal = Modal.open({
         onOk: async () => {
-          const result = await store.getGroupBinding(detail.group, {
-            workspace,
-          })
+          const result = await store.getGroupBinding(
+            { user: detail.name, group: detail.group },
+            {
+              workspace,
+            }
+          )
           const name = get(result.items[0], 'metadata.name')
           store.deleteGroupBinding(name, { workspace }).then(() => {
             Modal.close(modal)
