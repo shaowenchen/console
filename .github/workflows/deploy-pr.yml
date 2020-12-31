@@ -118,7 +118,7 @@ jobs:
           repository: ${{ github.repository }}
           deployment: ${{ fromJson(steps.create_deployment.outputs.data).id }}
           environment: dev
-          environment_url: http://${{ secrets.QING_EIP }}:${{ env.SERVICE_PORT }}/
+          environment_url: http://${{ secrets.QING_EIP }}:${ SERVICE_PORT }/
           log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           mediaType: '{"previews": ["ant-man"]}'
           state: success
