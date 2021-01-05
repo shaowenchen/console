@@ -98,7 +98,8 @@ export default class DevopsSelect extends Component {
 
   fetchDevops() {
     const { cluster } = this.state
-    if (cluster) {
+    const { showClusterSelect } = this.props
+    if (cluster || !showClusterSelect) {
       this.devopsStore.fetchList({
         workspace: this.props.workspace,
         cluster,
@@ -110,7 +111,7 @@ export default class DevopsSelect extends Component {
 
   fetchDevopsRoles() {
     const { cluster, namespace } = this.state
-    if (cluster && namespace) {
+    if (namespace) {
       this.devopsRoleStore.fetchList({
         devops: namespace,
         cluster,
@@ -148,21 +149,24 @@ export default class DevopsSelect extends Component {
     const {
       clusters,
       value: { disabled },
+      showClusterSelect,
     } = this.props
     const { cluster, namespace, role } = this.state
 
     return (
       <div className={styles.selectWrapper}>
-        <Select
-          name="cluster"
-          value={cluster}
-          disabled={disabled}
-          options={clusters}
-          placeholder={t('Please select a cluster')}
-          valueRenderer={option => `${t('Cluster')}: ${option.value}`}
-          prefixIcon={<Icon name="cluster" size={16} />}
-          onChange={this.handleClusterChange}
-        />
+        {showClusterSelect && (
+          <Select
+            name="cluster"
+            value={cluster}
+            disabled={disabled}
+            options={clusters}
+            placeholder={t('Please select a cluster')}
+            valueRenderer={option => `${t('Cluster')}: ${option.value}`}
+            prefixIcon={<Icon name="cluster" size={16} />}
+            onChange={this.handleClusterChange}
+          />
+        )}
         <Select
           name="namespace"
           value={namespace}

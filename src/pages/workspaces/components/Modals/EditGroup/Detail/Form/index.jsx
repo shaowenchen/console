@@ -110,7 +110,7 @@ export default class GroupForm extends React.Component {
     }
     if (value.length > 0) {
       value.forEach(item => {
-        if (!item.cluster || !item.namespace || !item.role) {
+        if (!item.role) {
           return callback({ message: t('Please add role') })
         }
       })
@@ -199,7 +199,11 @@ export default class GroupForm extends React.Component {
                 addText={t('Add project')}
                 checkItemValid={this.checkItemValid}
               >
-                <ProjectSelect clusters={this.clusters} {...this.props} />
+                <ProjectSelect
+                  clusters={this.clusters}
+                  showClusterSelect={globals.app.isMultiCluster}
+                  {...this.props}
+                />
               </ArrayInput>
             </Form.Item>
           </Form.Group>
@@ -216,7 +220,11 @@ export default class GroupForm extends React.Component {
                   addText={t('Add DevOps project')}
                   checkItemValid={this.checkItemValid}
                 >
-                  <DevopsSelect clusters={this.clusters} {...this.props} />
+                  <DevopsSelect
+                    clusters={this.clusters}
+                    showClusterSelect={globals.app.isMultiCluster}
+                    {...this.props}
+                  />
                 </ArrayInput>
               </Form.Item>
             </Form.Group>
