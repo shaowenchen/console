@@ -42,6 +42,7 @@ import styles from './index.scss'
 export default class GroupUser extends Component {
   static propTypes = {
     group: PropTypes.string,
+    enabledActions: PropTypes.array,
     selectedKeys: PropTypes.array,
     refreshFlag: PropTypes.bool,
     onSelect: PropTypes.func,
@@ -175,7 +176,7 @@ export default class GroupUser extends Component {
   renderUserItem(tab) {
     const { type, onFetch } = tab
     const { data = [], total, page, isLoading } = toJS(this.userStore[type])
-    const { selectedKeys } = this.props
+    const { selectedKeys, enabledActions } = this.props
     const { group } = this.state
 
     if (!group && type === 'ingroup') {
@@ -195,6 +196,7 @@ export default class GroupUser extends Component {
             key={`${type}-${item.name}`}
             user={item}
             group={group}
+            enabledActions={enabledActions}
             showDelete={type === 'ingroup'}
             selected={selectedKeys.includes(item.name)}
             onSelect={() => this.handleSelect(item)}

@@ -25,12 +25,28 @@ import styles from './index.scss'
 export default class UserItem extends React.Component {
   static propTypes = {
     user: PropTypes.object,
+    enabledActions: PropTypes.array,
     selected: PropTypes.bool,
     onSelect: PropTypes.func,
     onDelete: PropTypes.func,
   }
 
   renderButton() {
+    const { enabledActions, group, showDelete, onDelete } = this.props
+    if (!enabledActions.includes('manage') || !group) {
+      return null
+    }
+    if (!showDelete) {
+      return this.renderSelectedButton()
+    }
+    return (
+      <Button type="flat" onClick={onDelete}>
+        <Icon name="trash" size={16} />
+      </Button>
+    )
+  }
+
+  renderSelectedButton() {
     const { selected, onSelect } = this.props
     return selected ? (
       <Button type="flat" icon="check" disabled />
@@ -40,7 +56,7 @@ export default class UserItem extends React.Component {
   }
 
   render() {
-    const { user, showDelete, onDelete, group } = this.props
+    const { user } = this.props
 
     return (
       <div className={styles.item} data-user={user.username}>
@@ -51,12 +67,7 @@ export default class UserItem extends React.Component {
           title={user.name}
           desc={user.email}
         />
-        {!showDelete && group && this.renderButton()}
-        {showDelete && (
-          <Button type="flat" onClick={onDelete}>
-            <Icon name="trash" size={16} />
-          </Button>
-        )}
+        {this.renderButton()}
       </div>
     )
   }

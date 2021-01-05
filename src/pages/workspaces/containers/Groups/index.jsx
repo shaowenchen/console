@@ -71,6 +71,14 @@ export default class Groups extends React.Component {
     this.disposer && this.disposer()
   }
 
+  get enabledActions() {
+    const { workspace } = this.props.match.params
+    return globals.app.getActions({
+      module: 'groups',
+      workspace,
+    })
+  }
+
   initWebsocket = () => {
     const url = this.store.getWatchListUrl({ ...this.props.match.params })
     if (url) {
@@ -177,6 +185,10 @@ export default class Groups extends React.Component {
     const { selectUserKeys } = this.state
     const showSelect = selectUserKeys.length > 0
 
+    if (!this.enabledActions.includes('manage')) {
+      return null
+    }
+
     return (
       <div
         className={classnames(
@@ -245,6 +257,7 @@ export default class Groups extends React.Component {
                 refreshFlag={refreshFlag}
                 selectedKeys={selectUserKeys}
                 onSelect={this.handleSelectUser}
+                enabledActions={this.enabledActions}
                 {...this.props}
               />
             </div>
